@@ -1,0 +1,20 @@
+# Ujednaceni line-endings: u repou uvijek LF; uklanja CRLF upozorenja na Windowsu.
+* text=auto eol=lf
+
+# Eksplicitno tekstualni tipovi u projektu
+*.py    text eol=lf
+*.md    text eol=lf
+*.txt   text eol=lf
+*.toml  text eol=lf
+*.cfg   text eol=lf
+*.ini   text eol=lf
+*.json  text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.example text eol=lf
+.gitignore   text eol=lf
+.gitattributes text eol=lf
+
+# Binarni / podaci (ne diraj)
+*.db     binary
+*.jsonl  text eol=lf
