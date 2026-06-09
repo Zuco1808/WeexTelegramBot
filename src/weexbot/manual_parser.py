@@ -13,11 +13,12 @@ from dataclasses import dataclass, field
 
 from .normalize import normalize
 
-# Bazni simboli koje prepoznajemo kao parove (iz stvarnog kanala).
+# Bazni simboli koje prepoznajemo kao parove (iz stvarnog kanala + cesti majori).
 KNOWN_BASES: frozenset[str] = frozenset({
     "BTC", "ETH", "BNB", "XRP", "SOL", "ADA", "AVAX", "LINK", "TON", "TRX", "DOGE",
     "ASTER", "PUMP", "FF", "FARTCOIN", "ZEC", "EGLD", "ETC", "LTC", "ATOM", "HBAR",
-    "XAU", "XAG", "XAUT",
+    "XMR", "DOT", "NEAR", "APT", "ARB", "OP", "INJ", "SUI", "SEI", "TIA", "RUNE",
+    "AAVE", "UNI", "FIL", "XAU", "XAG", "XAUT",
 })
 # Puna imena -> ticker
 NAME_MAP = {"ETHEREUM": "ETH", "BITCOIN": "BTC"}
@@ -100,7 +101,8 @@ def _find_pairs(text: str) -> list[str]:
 
 
 def _find_side(text: str) -> str | None:
-    m = re.search(r"\b(long|short)\b", text, re.I)
+    # "long-term" / "long term" nije smjer pozicije -> preskoci taj "long"
+    m = re.search(r"\b(long|short)\b(?!\s*-?\s*term)", text, re.I)
     return m.group(1).upper() if m else None
 
 
@@ -175,8 +177,9 @@ def _find_partial_pct(text: str) -> int | None:
 
 
 _BREAKEVEN = re.compile(r"break\s*even|to entry price|stop to entry|sl to entry", re.I)
-_CLOSE = re.compile(r"stopped out|got stopped|\bstopped\b|fully close|close (?:the )?rest|"
-                    r"fully closed|close rest|closed by|closed at", re.I)
+_CLOSE = re.compile(r"stopped out|got stopped|\bstopped\b|fully close|full close|"
+                    r"close (?:the )?rest|fully closed|close rest|closed by|closed at|"
+                    r"clos\w+[^.]{0,40}complet", re.I)
 _OPEN_HINT = re.compile(r"\b(trying|opening|attempt|let'?s try|lets try|i'?m trying)\b", re.I)
 
 

@@ -119,16 +119,28 @@ class TradeManager:
                 )
 
     # ------------------------------------------------------------------ #
-    def _resolve_build_pair(self, facts: MessageFacts) -> str | None:
+    def _resolve_build_pair(self, facts: MessageFacts) -> tuple[str | None, str | None]:
+        """(pair, reason_if_none).
+
+        - eksplicitan par -> taj par
+        - bez para, ali izgleda kao SAMOSTALAN setup (ima smjer ili stop) ->
+          vjerojatno novi instrument s neprepoznatim tickerom (npr. OIL/PLTR)
+          -> NE preuzimaj current_pair (inace bi "oteo" tudu poziciju)
+        - bez para, samo razine (cisti nastavak-fragment) -> current_pair
+        """
         if facts.pairs:
-            return facts.pairs[0]
-        return self.current_pair
+            return facts.pairs[0], None
+        if facts.side or facts.stop_value is not None:
+            return None, "novi signal s neprepoznatim simbolom (ne-kripto/nepoznat ticker)"
+        if self.current_pair is not None:
+            return self.current_pair, None
+        return None, "signal bez prepoznatog para"
 
     def _handle_building(self, mid: str, facts: MessageFacts) -> list[TradeAction]:
-        pair = self._resolve_build_pair(facts)
+        pair, reason = self._resolve_build_pair(facts)
         if pair is None:
             return [TradeAction(mid, "NEEDS_REVIEW", None,
-                                {"reason": "signal bez prepoznatog para", "raw": facts.raw[:80]},
+                                {"reason": reason, "raw": facts.raw[:80]},
                                 confidence=0.3)]
         self.current_pair = pair
         draft = self.drafts.setdefault(pair, Draft(pair=pair, open_msg=mid))

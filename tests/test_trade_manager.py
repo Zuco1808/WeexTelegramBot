@@ -92,6 +92,36 @@ def test_building_bez_para_je_needs_review():
     assert _kinds(a) == ["NEEDS_REVIEW"]
 
 
+def test_xmr_se_prepoznaje_i_ne_otima_drugi_par():
+    """Regresija: prije je XMR signal (nepoznat par) preuzimao current_pair."""
+    tm = TradeManager()
+    tm.process("p1", "PUMP Long")
+    tm.process("p2", "PUMP / Entry 0.0014 / Stop 0.0012")
+    a = tm.process("x1", "XMR Long\nEntry: 289-296\nSL: 283")
+    assert _kinds(a) == ["OPEN"]
+    assert a[0].pair == "XMR"                      # ne PUMP!
+    assert tm.open_positions()["PUMP"].side == "LONG"   # PUMP netaknut
+
+
+def test_nepoznat_ticker_ide_u_review_a_ne_otima():
+    tm = TradeManager()
+    tm.process("b1", "BTC Short here")
+    tm.process("b2", "BTC / Entry 64000-65000 / Stop 66000")
+    # OIL/PLTR-tip: samostalan setup s neprepoznatim tickerom (nema para)
+    a = tm.process("o1", "Entry: 87-90\nSL: 78")
+    assert _kinds(a) == ["NEEDS_REVIEW"]
+    assert tm.open_positions()["BTC"].stop == 66000.0   # BTC netaknut
+
+
+def test_full_close_zatvara():
+    tm = TradeManager()
+    tm.process("m1", "PUMP Long")
+    tm.process("m2", "PUMP / Entry 0.0014 / Stop 0.0012")
+    a = tm.process("m3", "PUMP\nFull close")
+    assert _kinds(a) == ["CLOSE"]
+    assert "PUMP" not in tm.open_positions()
+
+
 def test_close_zatvara_poziciju():
     tm = TradeManager()
     tm.process("m1", "BTC Long")
