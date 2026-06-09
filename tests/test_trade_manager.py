@@ -113,6 +113,23 @@ def test_nepoznat_ticker_ide_u_review_a_ne_otima():
     assert tm.open_positions()["BTC"].stop == 66000.0   # BTC netaknut
 
 
+def test_tradfi_se_oznacava_kao_non_crypto():
+    tm = TradeManager()
+    a = tm.process("p1", "PLTR Long\nEntry: 136.5\nSL: 122\nTarget: 156")
+    assert _kinds(a) == ["SKIPPED_NON_CRYPTO"]
+    assert a[0].pair == "PLTR"
+    assert tm.open_positions() == {}
+
+
+def test_tradfi_ne_otima_otvorenu_kripto_poziciju():
+    tm = TradeManager()
+    tm.process("b1", "BTC Short here")
+    tm.process("b2", "BTC / Entry 64000-65000 / Stop 66000")
+    a = tm.process("o1", "OIL Long\nEntry: 87-90\nSL: 78")
+    assert _kinds(a) == ["SKIPPED_NON_CRYPTO"]
+    assert tm.open_positions()["BTC"].stop == 66000.0   # kripto pozicija netaknuta
+
+
 def test_full_close_zatvara():
     tm = TradeManager()
     tm.process("m1", "PUMP Long")

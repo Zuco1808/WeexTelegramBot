@@ -11,15 +11,18 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+from .config import NON_CRYPTO_SYMBOLS
 from .normalize import normalize
 
-# Bazni simboli koje prepoznajemo kao parove (iz stvarnog kanala + cesti majori).
-KNOWN_BASES: frozenset[str] = frozenset({
+# Kripto bazni simboli (iz stvarnog kanala + cesti majori).
+_CRYPTO_BASES: frozenset[str] = frozenset({
     "BTC", "ETH", "BNB", "XRP", "SOL", "ADA", "AVAX", "LINK", "TON", "TRX", "DOGE",
     "ASTER", "PUMP", "FF", "FARTCOIN", "ZEC", "EGLD", "ETC", "LTC", "ATOM", "HBAR",
     "XMR", "DOT", "NEAR", "APT", "ARB", "OP", "INJ", "SUI", "SEI", "TIA", "RUNE",
     "AAVE", "UNI", "FIL", "XAU", "XAG", "XAUT",
 })
+# Sve sto prepoznajemo kao "par" = kripto + TradFi/robe (potonje se kasnije skipa).
+KNOWN_BASES: frozenset[str] = _CRYPTO_BASES | NON_CRYPTO_SYMBOLS
 # Puna imena -> ticker
 NAME_MAP = {"ETHEREUM": "ETH", "BITCOIN": "BTC"}
 

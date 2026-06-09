@@ -58,7 +58,8 @@ def main() -> int:
         counts[a.kind] = counts.get(a.kind, 0) + 1
 
     print("=== Sazetak akcija ===")
-    for k in ("OPEN", "MOVE_SL", "BREAKEVEN", "PARTIAL_CLOSE", "CLOSE", "EXPIRE", "NEEDS_REVIEW"):
+    for k in ("OPEN", "MOVE_SL", "BREAKEVEN", "PARTIAL_CLOSE", "CLOSE", "EXPIRE",
+              "SKIPPED_NON_CRYPTO", "NEEDS_REVIEW"):
         if counts.get(k):
             print(f"  {k:14s}: {counts[k]}")
     print(f"\n  Otvorenih pozicija na kraju: {len(tm.open_positions())}")

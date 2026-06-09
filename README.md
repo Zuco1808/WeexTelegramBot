@@ -13,6 +13,7 @@ Parser trading signala iz Telegram izvoza, kao temelj za kasniji **WEEX paper-tr
 | Brandon zone (B) | Parsiraju se, ali se **ne trguju** (Faza 2) |
 | Leverage | Najniža iz raspona, **cap x10** (`LEVERAGE_CAP`) |
 | Metali (XAU/XAG/XAUT) | `SKIPPED_NO_SYMBOL` (nema na WEEX) |
+| TradFi/robe (PLTR, OIL, dionice) | `SKIPPED_NON_CRYPTO` (nije na WEEX kripto futures) |
 | Kapital (simulacija) | **100 USDT**, rizik **1%** po scalpu |
 | Način rada | Paper / lokalno (nema API ključeva) |
 

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .config import SKIP_SYMBOLS
+from .config import NON_CRYPTO_SYMBOLS, SKIP_SYMBOLS
 
 # Mjesto za buduce iznimke kad potvrdimo stvarni WEEX format (Faza 3).
 SYMBOL_OVERRIDES: dict[str, str] = {}
@@ -32,6 +32,8 @@ def resolve_symbol(pair: str) -> SymbolInfo:
 
     if base in SKIP_SYMBOLS or p in SKIP_SYMBOLS:
         return SymbolInfo(p, base, None, False, "Metal/nije na WEEX kripto futures")
+    if base in NON_CRYPTO_SYMBOLS or p in NON_CRYPTO_SYMBOLS:
+        return SymbolInfo(p, base, None, False, "TradFi/roba - nije na WEEX kripto futures")
     if not p.endswith("USDT"):
         return SymbolInfo(p, base, None, False, "Nepoznat format para (ocekivano *USDT)")
 

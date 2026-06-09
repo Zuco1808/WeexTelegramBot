@@ -41,6 +41,13 @@ MAX_PORTFOLIO_MARGIN_PCT: float = 1.0       # maks. ukupna margina kao udio stan
 # ali ih oznacava statusom SKIPPED_NO_SYMBOL i nikad ne salje nalog.
 SKIP_SYMBOLS: frozenset[str] = frozenset({"XAU", "XAG", "XAUT", "XAGT"})
 
+# TradFi/robe (dionice, indeksi, nafta...) - Brandon ih povremeno dijeli, ali
+# NISU na WEEX kripto futures. Detektiramo ih da bismo ih JASNO oznacili kao
+# preskocene (a ne kao "nepoznat ticker"). Prosiruj po potrebi.
+NON_CRYPTO_SYMBOLS: frozenset[str] = frozenset({
+    "PLTR", "OIL", "GOLD", "SILVER", "NVDA", "TSLA", "AAPL", "MSFT", "AMZN", "META",
+})
+
 # --- Sto se smije auto-tradeati u Fazi 1 (dogovoreno) ---
 # Samo precizni formati: Jeffrey scalp (A) i bot (C).
 # Brandon zone (B), manual (D), update (E) -> NE trguju se automatski u Fazi 1.
