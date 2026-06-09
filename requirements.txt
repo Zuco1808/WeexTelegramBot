@@ -1,0 +1,7 @@
+# Faza 0 + 1 ovisnosti
+beautifulsoup4>=4.12      # parsiranje Telegram HTML izvoza (Faza 0)
+pytest>=8.0               # testovi parsera (Faza 1)
+
+# Napomena: parser biblioteka (src/weexbot) NEMA vanjskih ovisnosti -
+# koristi samo Python standardnu biblioteku (re, dataclasses).
+# bs4 treba SAMO ekstraktor (extract_messages.py).

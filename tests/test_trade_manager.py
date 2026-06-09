@@ -1,0 +1,136 @@
+# -*- coding: utf-8 -*-
+"""Testovi Trade Managera: multi-message sklapanje + korelacija update poruka."""
+from weexbot.trade_manager import TradeManager
+
+
+def _kinds(actions):
+    return [a.kind for a in actions]
+
+
+def test_multi_message_open():
+    """Par+stop u jednoj poruci, entry u sljedecoj -> OPEN tek kad je potpun."""
+    tm = TradeManager()
+    a1 = tm.process("m148", "Trying another short on BTC from current levels. Stop at 70,700.")
+    assert a1 == []                              # jos nema entry
+    a2 = tm.process("m150", "Entry: 69,500-70,200")
+    assert _kinds(a2) == ["OPEN"]
+    pos = tm.open_positions()["BTC"]
+    assert pos.side == "SHORT"
+    assert pos.entry_zone == (69500.0, 70200.0)
+    assert pos.stop == 70700.0
+
+
+def test_dvije_pozicije_i_routing_move_sl():
+    tm = TradeManager()
+    tm.process("m352", "BTC Short here")
+    tm.process("m353", "ETH Short here")
+    tm.process("m354", "BTC / Entry 64400-65000 / Stop 65600 / Target 62000")
+    tm.process("m355", "ETH / Entry 1890-1910 / Stop Loss 1937 / Target 1700")
+    assert set(tm.open_positions()) == {"BTC", "ETH"}
+
+    a_btc = tm.process("m356", "BTC Stop to 66100")
+    assert _kinds(a_btc) == ["MOVE_SL"]
+    assert a_btc[0].pair == "BTC"
+    assert tm.positions["BTC"].stop == 66100.0
+
+    a_eth = tm.process("m357", "ETH stop to 1955")
+    assert a_eth[0].pair == "ETH"
+    assert tm.positions["ETH"].stop == 1955.0
+    # BTC ostao netaknut
+    assert tm.positions["BTC"].stop == 66100.0
+
+
+def test_breakeven_postavlja_stop_na_entry():
+    tm = TradeManager()
+    tm.process("m1", "ETH Long")
+    tm.process("m2", "ETH / Entry 2000 / Stop 1950")
+    assert tm.positions["ETH"].entry == 2000.0
+    a = tm.process("m3", "ETH SL to breakeven")
+    assert _kinds(a) == ["BREAKEVEN"]
+    assert tm.positions["ETH"].stop == 2000.0
+
+
+def test_update_bez_para_jedna_otvorena():
+    tm = TradeManager()
+    tm.process("m1", "BTC Long")
+    tm.process("m2", "BTC / Entry 67000 / Stop 65000")
+    a = tm.process("m3", "Move SL to 66000")        # nema para, ali samo 1 otvorena
+    assert _kinds(a) == ["MOVE_SL"]
+    assert tm.positions["BTC"].stop == 66000.0
+
+
+def test_update_bez_para_vise_otvorenih_je_needs_review():
+    tm = TradeManager()
+    tm.process("m1", "BTC Long")
+    tm.process("m2", "BTC / Entry 67000 / Stop 65000")
+    tm.process("m3", "ETH Long")
+    tm.process("m4", "ETH / Entry 2000 / Stop 1950")
+    a = tm.process("m5", "SL to breakeven")          # dvosmisleno
+    assert _kinds(a) == ["NEEDS_REVIEW"]
+    # nista nije promijenjeno
+    assert tm.positions["BTC"].stop == 65000.0
+    assert tm.positions["ETH"].stop == 1950.0
+
+
+def test_dva_para_u_jednoj_update_poruci():
+    tm = TradeManager()
+    tm.process("m1", "BTC Short here")
+    tm.process("m2", "BTC / Entry 64400-65000 / Stop 65600")
+    tm.process("m3", "ETH Short here")
+    tm.process("m4", "ETH / Entry 1890-1910 / Stop 1937")
+    a = tm.process("m5", "BTC ETH Close 30% of both positions and SL to breakeven")
+    kinds = _kinds(a)
+    assert kinds.count("BREAKEVEN") == 2
+    assert kinds.count("PARTIAL_CLOSE") == 2
+    assert tm.positions["BTC"].remaining_pct == 70
+    assert tm.positions["ETH"].remaining_pct == 70
+
+
+def test_building_bez_para_je_needs_review():
+    tm = TradeManager()
+    a = tm.process("m1", "Trying a small LONG here.")
+    assert _kinds(a) == ["NEEDS_REVIEW"]
+
+
+def test_close_zatvara_poziciju():
+    tm = TradeManager()
+    tm.process("m1", "BTC Long")
+    tm.process("m2", "BTC / Entry 67000 / Stop 65000")
+    a = tm.process("m3", "Stopped out")
+    assert _kinds(a) == ["CLOSE"]
+    assert "BTC" not in tm.open_positions()
+
+
+def test_reopen_zamjenjuje_staru_poziciju():
+    tm = TradeManager()
+    tm.process("m1", "BTC Long")
+    tm.process("m2", "BTC / Entry 67000 / Stop 65000")
+    tm.process("m3", "BTC Short here")
+    a4 = tm.process("m4", "BTC / Entry 70000 / Stop 71000")
+    # m4 treba zatvoriti staru (CLOSE) pa otvoriti novu (OPEN)
+    assert _kinds(a4) == ["CLOSE", "OPEN"]
+    assert len(tm.open_positions()) == 1
+    assert tm.open_positions()["BTC"].side == "SHORT"
+    assert tm.open_positions()["BTC"].stop == 71000.0
+
+
+def test_stale_expiry_zatvara_neaktivnu_poziciju():
+    tm = TradeManager(stale_ticks=2)
+    tm.process("m1", "BTC Long")                       # tick1
+    tm.process("m2", "BTC / Entry 67000 / Stop 65000")  # tick2 -> OPEN, last_tick=2
+    assert "BTC" in tm.open_positions()
+    tm.process("c1", "some random commentary here")     # tick3 (3-2=1)
+    tm.process("c2", "more random commentary here")     # tick4 (4-2=2)
+    a = tm.process("c3", "even more commentary here")    # tick5 (5-2=3 > 2) -> EXPIRE
+    assert "EXPIRE" in _kinds(a)
+    assert "BTC" not in tm.open_positions()
+
+
+def test_aktivnost_odgada_expiry():
+    tm = TradeManager(stale_ticks=2)
+    tm.process("m1", "BTC Long")
+    tm.process("m2", "BTC / Entry 67000 / Stop 65000")  # tick2
+    tm.process("c1", "random commentary one")            # tick3
+    tm.process("m4", "BTC Stop to 66000")                # tick4 -> aktivnost, last_tick=4
+    tm.process("c2", "random commentary two")            # tick5 (5-4=1)
+    assert "BTC" in tm.open_positions()                  # jos zivo
