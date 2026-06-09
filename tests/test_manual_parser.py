@@ -69,3 +69,32 @@ def test_trying_short_s_kontekstom():
 def test_partial_pct_prije_kljucne_rijeci():
     assert extract_facts("50% take here").partial_pct == 50
     assert extract_facts("Take 25% here").partial_pct == 25
+
+
+def test_numerirani_tp_prefiks():
+    # XMR stil: "1TP - 311  2TP - 330  3TP - 347"
+    f = extract_facts("XMR Long\nEntry: 289-296\nSL: 283\n1TP - 311\n2TP - 330\n3TP - 347")
+    assert f.pairs == ["XMR"]
+    assert f.entry_zone == (289.0, 296.0)
+    assert f.stop_value == 283.0
+    assert f.targets == [311.0, 330.0, 347.0]
+
+
+def test_numerirani_tp_sufiks_s_instrukcijom():
+    # OIL stil: "TP1: 96 - take 50% ... TP2: 117 - close the rest"
+    f = extract_facts("Entry: 87\nSecond entry: 82\nTP1: 96 - take 50%\nTP2: 117 - close the rest\nSL: 78.8")
+    assert f.entry_zone == (87.0, 82.0)
+    assert f.stop_value == 78.8
+    assert f.targets == [96.0, 117.0]
+
+
+def test_label_target_i_dalje_radi():
+    assert extract_facts("BTC Short\nEntry: 62200-64300\nSL: 66300\nTarget: 55000").targets == [55000.0]
+
+
+def test_tiered_entry_s_alokacijom():
+    # "Entry: 1. 136.5 - 30%  2. 128 - 70%" -> zona (136.5, 128), ne 1.0
+    f = extract_facts("PLTR Long\nEntry:\n1. 136.5 - 30%\n2. 128 - 70%\nSL: 122\nTarget: 156")
+    assert f.entry_zone == (136.5, 128.0)
+    assert f.stop_value == 122.0
+    assert f.targets == [156.0]

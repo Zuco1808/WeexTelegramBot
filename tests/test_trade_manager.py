@@ -107,10 +107,19 @@ def test_nepoznat_ticker_ide_u_review_a_ne_otima():
     tm = TradeManager()
     tm.process("b1", "BTC Short here")
     tm.process("b2", "BTC / Entry 64000-65000 / Stop 66000")
-    # OIL/PLTR-tip: samostalan setup s neprepoznatim tickerom (nema para)
-    a = tm.process("o1", "Entry: 87-90\nSL: 78")
+    # vodeci neprepoznat ticker (npr. WTI) -> ne smije oteti BTC poziciju
+    a = tm.process("o1", "WTI Long\nEntry: 87-90\nSL: 78")
     assert _kinds(a) == ["NEEDS_REVIEW"]
     assert tm.open_positions()["BTC"].stop == 66000.0   # BTC netaknut
+
+
+def test_pairless_fragment_nastavlja_current_pair():
+    # fragment bez tickera (samo entry/stop) nastavlja zadnji par
+    tm = TradeManager()
+    tm.process("b1", "BTC Short here")
+    a = tm.process("b2", "Entry 64000-65000\nStop 66000")   # nema para -> BTC
+    assert _kinds(a) == ["OPEN"]
+    assert a[0].pair == "BTC"
 
 
 def test_tradfi_se_oznacava_kao_non_crypto():

@@ -60,6 +60,7 @@ class MessageFacts:
     partial_pct: int | None = None
     close: bool = False                  # stopped out / fully close
     open_hint: bool = False              # "trying/opening ... long/short"
+    unknown_ticker: bool = False         # vodeci neprepoznat ticker (novi instrument)
 
     @property
     def is_building(self) -> bool:
@@ -85,7 +86,8 @@ class MessageFacts:
 
 
 # --- pojedinacni ekstraktori ------------------------------------------------ #
-_PAIR_TOKEN = re.compile(r"\b([A-Z]{2,8})(USDT)?\b")
+_PAIR_TOKEN = re.compile(r"\b([A-Z]{2,10})\b")
+_LEADING_TOKEN = re.compile(r"\s*([A-Z]{2,10})\b")
 
 
 def _find_pairs(text: str) -> list[str]:
@@ -95,12 +97,27 @@ def _find_pairs(text: str) -> list[str]:
         if re.search(rf"\b{name}\b", text, re.I) and base not in found:
             found.append(base)
     for m in _PAIR_TOKEN.finditer(text):
-        token, usdt = m.group(1), m.group(2)
-        base = token
-        if base in KNOWN_BASES or usdt:
-            if base not in found:
-                found.append(base)
+        tok = m.group(1)
+        if tok.endswith("USDT") and len(tok) > 4:
+            base = tok[:-4]                 # XYZUSDT -> XYZ (svaki *USDT je par)
+        elif tok in KNOWN_BASES:
+            base = tok
+        else:
+            continue
+        if base not in found:
+            found.append(base)
     return found
+
+
+def _has_unknown_ticker(text: str, pairs: list[str]) -> bool:
+    """Vodeci ALLCAPS token koji NIJE prepoznat kao par => novi/nepoznat instrument."""
+    if pairs:
+        return False
+    m = _LEADING_TOKEN.match(text)
+    if not m:
+        return False
+    tok = m.group(1)
+    return not tok.endswith("USDT") and tok not in KNOWN_BASES
 
 
 def _find_side(text: str) -> str | None:
@@ -110,22 +127,36 @@ def _find_side(text: str) -> str | None:
 
 
 def _find_entry(text: str):
-    m = re.search(
-        r"\bentr(?:y|ies)\b(?:\s*(?:zone|range|point|levels?))?\s*:?\s*"
-        rf"(?:market\s*/\s*)?({_NUM})(?:\s*[-/]\s*({_NUM}))?",
-        text, re.I,
-    )
+    m = re.search(r"\bentr(?:y|ies)\b(?:\s*(?:zone|range|point|levels?))?\s*:?\s*(?P<rest>.*)",
+                  text, re.I)
     if not m:
         return None, None
-    a = _to_float(m.group(1))
-    b = _to_float(m.group(2)) if m.group(2) else None
+    # gledaj samo do prvog SL/Stop/Target/TP kljuca
+    rest = re.split(r"\b(sl|stop|stoploss|target|targets|tp)\b", m.group("rest"), flags=re.I)[0]
+
+    # tiered ulaz s alokacijom: "1. 136.5 - 30%  2. 128 - 70%"
+    tiered = re.findall(r"\d+\.\s*(" + _NUM + r")\s*-\s*\d+\s*%", rest)
+    if len(tiered) >= 2:
+        a, b = _to_float(tiered[0]), _to_float(tiered[1])
+        if a is not None and b is not None:
+            return None, (a, b)
+
+    # standardno: opc. ordinal "1.", opc. "market /", cijena, opc. raspon
+    m2 = re.search(r"(?:\d+\.\s+)?(?:market\s*/\s*)?(" + _NUM + r")(?:\s*[-/]\s*(" + _NUM + r"))?", rest)
+    if not m2:
+        return None, None
+    a = _to_float(m2.group(1))
+    b = _to_float(m2.group(2)) if m2.group(2) else None
     if a is None:
         return None, None
+    # "Second entry: X" -> druga granica zone
+    if b is None:
+        sec = re.search(r"second\s+entry\s*:?\s*(" + _NUM + r")", text, re.I)
+        if sec:
+            b = _to_float(sec.group(1))
     if b is not None:
-        # prava zona ima brojeve istog reda velicine; ako je omjer >10x,
-        # drugi broj je sum -> tretiraj kao jedan ulaz
         lo, hi = min(a, b), max(a, b)
-        if lo > 0 and hi / lo > 10:
+        if lo > 0 and hi / lo > 10:        # omjer >10x -> drugi broj je sum
             return a, None
         return None, (a, b)
     return a, None
@@ -151,11 +182,14 @@ def _find_stop(text: str):
 
 
 def _find_targets(text: str) -> list[float]:
-    m = re.search(
-        r"(targets?|take[-\s]?profits?|final take[-\s]?profit|first target|"
-        r"\btp\b|\d+\s*target)\b[: ]*(?P<tail>.*)$",
-        text, re.I,
-    )
+    # 1) numerirani TP-ovi: "1TP - 311", "TP1: 96", "TP - 73", "2TP-330", "3TP - 347"
+    numbered = re.findall(r"\b\d?\s*tp\s*\d?\s*[-:]\s*(" + _NUM + r")", text, re.I)
+    if numbered:
+        out = [_to_float(x) for x in numbered]
+        return [n for n in out if n is not None][:5]
+    # 2) labelirani: "Target(s): a / b / c", "First/Final take-profit: x"
+    m = re.search(r"(?:targets?|take[-\s]?profits?|final take[-\s]?profit|first target)"
+                  r"\s*:?\s*(?P<tail>.*)$", text, re.I)
     if not m:
         return []
     tail = re.split(r"\b(sl|stop)\b", m.group("tail"), flags=re.I)[0]
@@ -190,9 +224,11 @@ def extract_facts(raw: str) -> MessageFacts:
     text = normalize(raw)
     entry, zone = _find_entry(text)
     stop_val, stop_move = _find_stop(text)
+    pairs = _find_pairs(text)
     return MessageFacts(
         raw=raw,
-        pairs=_find_pairs(text),
+        pairs=pairs,
+        unknown_ticker=_has_unknown_ticker(text, pairs),
         side=_find_side(text),
         entry=entry,
         entry_zone=zone,

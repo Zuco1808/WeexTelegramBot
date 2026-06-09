@@ -130,8 +130,11 @@ class TradeManager:
         """
         if facts.pairs:
             return facts.pairs[0], None
-        if facts.side or facts.stop_value is not None:
+        # poruka imenuje neprepoznat ticker (npr. WTI) -> novi instrument,
+        # NE preuzimaj current_pair (inace bi "oteo" tudu poziciju)
+        if facts.unknown_ticker:
             return None, "novi signal s neprepoznatim simbolom (ne-kripto/nepoznat ticker)"
+        # parcijalni fragment bez tickera (samo ulaz/stop) = nastavak -> current_pair
         if self.current_pair is not None:
             return self.current_pair, None
         return None, "signal bez prepoznatog para"
