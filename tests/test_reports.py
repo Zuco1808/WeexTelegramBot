@@ -7,8 +7,10 @@ from weexbot.reports import (
     Trade,
     aggregate,
     by_symbol,
+    equity_svg,
     render_dashboard,
     summary,
+    to_html,
     trades_from_rows,
 )
 
@@ -53,6 +55,15 @@ def test_po_simbolu_sortirano_po_pnl():
 def test_prazno_ne_puca():
     assert summary([])["count"] == 0
     assert "IZVJESTAJ" in render_dashboard([], color=False)
+    assert equity_svg([]) == ""             # prazno -> nema grafa
+
+
+def test_equity_svg_i_html_graf():
+    trades = [_t("BTCUSDT", 10, 9), _t("ETHUSDT", -4, 10), _t("BTCUSDT", 6, 11)]
+    svg = equity_svg(trades)
+    assert svg.startswith("<svg") and "polyline" in svg
+    html = to_html(trades)
+    assert "Equity curve" in html and "<svg" in html
 
 
 def test_ledger_iz_baze():

@@ -181,6 +181,56 @@ def render_dashboard(trades: list[Trade], color: bool = True) -> str:
 
 
 # --------------------------------------------------------------------------- #
+def equity_svg(trades: list[Trade], width: int = 820, height: int = 260) -> str:
+    """Inline SVG linijski grafikon kumulativnog PnL-a po danima."""
+    days = aggregate(trades, "day")
+    if not days:
+        return ""
+    cum, running = [], 0.0
+    for b in days:
+        running += b.pnl
+        cum.append(running)
+
+    pad_l, pad_r, pad_t, pad_b = 52, 18, 18, 28
+    plot_w, plot_h = width - pad_l - pad_r, height - pad_t - pad_b
+    y_min, y_max = min(min(cum), 0.0), max(max(cum), 0.0)
+    y_rng = (y_max - y_min) or 1.0
+    n = len(cum)
+
+    def X(i: int) -> float:
+        return pad_l + (i / (n - 1) * plot_w if n > 1 else plot_w / 2)
+
+    def Y(v: float) -> float:
+        return pad_t + (1 - (v - y_min) / y_rng) * plot_h
+
+    pts = " ".join(f"{X(i):.1f},{Y(v):.1f}" for i, v in enumerate(cum))
+    color = "#16a34a" if running >= 0 else "#dc2626"
+    y0 = Y(0.0)
+    area = (f"M {X(0):.1f},{y0:.1f} L "
+            + " ".join(f"{X(i):.1f},{Y(v):.1f}" for i, v in enumerate(cum))
+            + f" L {X(n - 1):.1f},{y0:.1f} Z")
+
+    def lbl(v: float, y: float) -> str:
+        return (f'<text x="{pad_l - 8}" y="{y + 4:.1f}" text-anchor="end" '
+                f'font-size="11" fill="#666">{v:+.0f}</text>')
+
+    return (
+        f'<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}" '
+        f'role="img" aria-label="Equity curve">'
+        f'<rect x="{pad_l}" y="{pad_t}" width="{plot_w}" height="{plot_h}" '
+        f'fill="#fafafa" stroke="#eee"/>'
+        f'<line x1="{pad_l}" y1="{y0:.1f}" x2="{pad_l + plot_w}" y2="{y0:.1f}" '
+        f'stroke="#bbb" stroke-dasharray="4 3"/>'
+        f'<path d="{area}" fill="{color}" fill-opacity="0.12"/>'
+        f'<polyline points="{pts}" fill="none" stroke="{color}" stroke-width="2"/>'
+        f'{lbl(y_max, Y(y_max))}{lbl(0, y0)}{lbl(y_min, Y(y_min))}'
+        f'<text x="{pad_l}" y="{height - 8}" font-size="11" fill="#666">{days[0].key}</text>'
+        f'<text x="{pad_l + plot_w}" y="{height - 8}" text-anchor="end" '
+        f'font-size="11" fill="#666">{days[-1].key}</text>'
+        f'</svg>'
+    )
+
+
 def to_html(trades: list[Trade]) -> str:
     s = summary(trades)
 
@@ -198,6 +248,7 @@ def to_html(trades: list[Trade]) -> str:
     body = (f"<h1>WEEX Bot — Izvjestaj</h1>"
             f"<p><b>PnL ukupno:</b> {_fmt_pnl(s['total_pnl'])} &nbsp; "
             f"<b>Trejdova:</b> {s['count']} &nbsp; <b>Win:</b> {s['winrate']:.0f}%</p>"
+            + (f"<h2>Equity curve</h2>{equity_svg(trades)}" if trades else "")
             + table("Dnevni", aggregate(trades, "day"))
             + table("Sedmicni", aggregate(trades, "week"))
             + table("Mjesecni", aggregate(trades, "month"))

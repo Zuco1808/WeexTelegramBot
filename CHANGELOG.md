@@ -26,7 +26,8 @@ aktivnom razvoju (pre-1.0); verzije nisu još taggane.
   na USDT perpetual (GOLD→XAUTUSDT, OIL→XTIUSDT, dionice→+USDT, `ON`→USDT).
 - **Izvještaji / dashboard:** `reports.py` + `run_reports.py` — dnevni/sedmični/mjesečni
   PnL (zeleno plus / crveno minus, broj trejdova, win rate), po simbolu, najbolji/najgori
-  dan, equity sparkline, HTML izvoz; `trades` ledger u SQLite (puni ga `PaperWeexClient`).
+  dan, equity sparkline (terminal) i **SVG equity curve grafikon** u HTML izvozu;
+  `trades` ledger u SQLite (puni ga `PaperWeexClient`).
 
 ### Promijenjeno
 - TradFi (metali/nafta/dionice) **više se ne preskaču** — podržani su na WEEX-u uz
