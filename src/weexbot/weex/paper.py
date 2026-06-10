@@ -31,8 +31,10 @@ def _triggered(otype: str, side: str, limit: float, price: float) -> bool:
 
 
 class PaperWeexClient(WeexClient):
-    def __init__(self, balance: float = 100.0):
+    def __init__(self, balance: float = 100.0, db=None, source: str = "paper"):
         self.balance = balance
+        self.db = db                              # opcionalni Database za trades ledger
+        self.source = source
         self.leverage: dict[str, float] = {}
         self.margin_mode: dict[str, str] = {}
         self._orders: dict[str, dict] = {}        # coid -> {"req":.., "status":..,"filled":..}
@@ -142,6 +144,9 @@ class PaperWeexClient(WeexClient):
         self.balance += pnl
         pos.realized_pnl += pnl
         pos.quantity -= qty
+        if self.db is not None:
+            self.db.record_trade(pos.symbol, pos.side, qty, pos.entry_price, price,
+                                 pnl, source=self.source)
         if pos.quantity <= 1e-12:
             del self._positions[req.symbol]
             self._cancel_reduce_only(req.symbol)

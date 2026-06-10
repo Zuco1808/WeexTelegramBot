@@ -167,6 +167,23 @@ ekstrakcije, 5 update bez otvorene pozicije, 2 close uz više parova — svi sig
 označeni, nijedan kao pogrešna akcija. Točna simulacija zatvaranja na TP/SL traži
 povijesne cijene (Faza 3).
 
+## Izvještaji / dashboard
+
+`reports.py` + `run_reports.py` — dnevni/sedmični/mjesečni pregled nad `trades`
+ledgerom: **zeleno** dani u plusu (PnL + broj trejdova), **crveno** dani u minusu.
+
+```powershell
+python run_reports.py --seed-demo          # DEMO podaci -> vidiš format
+python run_reports.py --html               # izvezi data/report.html
+```
+
+Sadrži: ukupni PnL/win rate/prosjek po trejdu, najbolji/najgori dan, equity
+sparkline, te pregled **po simbolu**. `PaperWeexClient(db=...)` automatski upisuje
+zatvorene trejdove u ledger.
+
+> Pravi PnL po danima dolazi tek s cijenama u Fazi 3 (live/price feed). Do tada
+> `--seed-demo` služi za prikaz formata.
+
 ## Faza 3 — WEEX klijent (skeleton)
 
 Paket `weex/`: jedinstveno sučelje `WeexClient`, paper implementacija s fill-ovima

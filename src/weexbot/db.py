@@ -79,6 +79,20 @@ CREATE TABLE IF NOT EXISTS audit_log (
     detail     TEXT
 );
 
+-- Zatvoreni trejdovi (ledger za izvjestaje/dashboard)
+CREATE TABLE IF NOT EXISTS trades (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    symbol      TEXT NOT NULL,
+    side        TEXT,
+    quantity    REAL,
+    entry_price REAL,
+    exit_price  REAL,
+    pnl         REAL NOT NULL,
+    opened_at   TEXT,
+    closed_at   TEXT NOT NULL,
+    source      TEXT
+);
+
 -- Trade Manager (Brandon multi-message korelacija)
 -- Kljuc je (pair, tag) jer Brandon zna drzati vise pozicija po paru (CORE/SCALP).
 CREATE TABLE IF NOT EXISTS tm_positions (
@@ -268,3 +282,26 @@ class Database:
             "SELECT kind, COUNT(*) c FROM tm_actions GROUP BY kind"
         ).fetchall()
         return {r["kind"]: r["c"] for r in rows}
+
+    # --- trades ledger (izvjestaji) -------------------------------------- #
+    def record_trade(self, symbol: str, side: str | None, quantity: float | None,
+                     entry_price: float | None, exit_price: float | None, pnl: float,
+                     closed_at: str | None = None, opened_at: str | None = None,
+                     source: str = "") -> int:
+        cur = self.conn.execute(
+            """INSERT INTO trades
+               (symbol, side, quantity, entry_price, exit_price, pnl,
+                opened_at, closed_at, source)
+               VALUES (?,?,?,?,?,?,?,?,?)""",
+            (symbol, side, quantity, entry_price, exit_price, pnl,
+             opened_at, closed_at or _now(), source),
+        )
+        self.conn.commit()
+        return cur.lastrowid
+
+    def trades(self) -> list[sqlite3.Row]:
+        return self.conn.execute("SELECT * FROM trades ORDER BY closed_at").fetchall()
+
+    def clear_trades(self) -> None:
+        self.conn.execute("DELETE FROM trades")
+        self.conn.commit()
