@@ -31,23 +31,23 @@ def test_dvije_pozicije_i_routing_move_sl():
     a_btc = tm.process("m356", "BTC Stop to 66100")
     assert _kinds(a_btc) == ["MOVE_SL"]
     assert a_btc[0].pair == "BTC"
-    assert tm.positions["BTC"].stop == 66100.0
+    assert tm.position("BTC").stop == 66100.0
 
     a_eth = tm.process("m357", "ETH stop to 1955")
     assert a_eth[0].pair == "ETH"
-    assert tm.positions["ETH"].stop == 1955.0
+    assert tm.position("ETH").stop == 1955.0
     # BTC ostao netaknut
-    assert tm.positions["BTC"].stop == 66100.0
+    assert tm.position("BTC").stop == 66100.0
 
 
 def test_breakeven_postavlja_stop_na_entry():
     tm = TradeManager()
     tm.process("m1", "ETH Long")
     tm.process("m2", "ETH / Entry 2000 / Stop 1950")
-    assert tm.positions["ETH"].entry == 2000.0
+    assert tm.position("ETH").entry == 2000.0
     a = tm.process("m3", "ETH SL to breakeven")
     assert _kinds(a) == ["BREAKEVEN"]
-    assert tm.positions["ETH"].stop == 2000.0
+    assert tm.position("ETH").stop == 2000.0
 
 
 def test_update_bez_para_jedna_otvorena():
@@ -56,7 +56,7 @@ def test_update_bez_para_jedna_otvorena():
     tm.process("m2", "BTC / Entry 67000 / Stop 65000")
     a = tm.process("m3", "Move SL to 66000")        # nema para, ali samo 1 otvorena
     assert _kinds(a) == ["MOVE_SL"]
-    assert tm.positions["BTC"].stop == 66000.0
+    assert tm.position("BTC").stop == 66000.0
 
 
 def test_update_bez_para_vise_otvorenih_je_needs_review():
@@ -68,8 +68,8 @@ def test_update_bez_para_vise_otvorenih_je_needs_review():
     a = tm.process("m5", "SL to breakeven")          # dvosmisleno
     assert _kinds(a) == ["NEEDS_REVIEW"]
     # nista nije promijenjeno
-    assert tm.positions["BTC"].stop == 65000.0
-    assert tm.positions["ETH"].stop == 1950.0
+    assert tm.position("BTC").stop == 65000.0
+    assert tm.position("ETH").stop == 1950.0
 
 
 def test_dva_para_u_jednoj_update_poruci():
@@ -82,8 +82,37 @@ def test_dva_para_u_jednoj_update_poruci():
     kinds = _kinds(a)
     assert kinds.count("BREAKEVEN") == 2
     assert kinds.count("PARTIAL_CLOSE") == 2
-    assert tm.positions["BTC"].remaining_pct == 70
-    assert tm.positions["ETH"].remaining_pct == 70
+    assert tm.position("BTC").remaining_pct == 70
+    assert tm.position("ETH").remaining_pct == 70
+
+
+def test_core_i_scalp_na_istom_paru_routing_po_tagu():
+    """Brandon: long-term core short + scalp short na istom BTC; izmjene po tagu."""
+    tm = TradeManager()
+    tm.process("s1", "BTC Short here\nEntry: 61400-62200\nSL: 63250")           # SCALP
+    tm.process("c1", "BTC long-term short\nEntry: 70000-72000\nSL: 75000")      # CORE
+    assert tm.position("BTC", "SCALP").stop == 63250.0
+    assert tm.position("BTC", "CORE").stop == 75000.0
+    assert len(tm.all_open()) == 2
+
+    # izmjena koja spominje "long-term" -> ide na CORE, scalp netaknut
+    a = tm.process("u1", "Move the long-term stop to 68300")
+    assert _kinds(a) == ["MOVE_SL"]
+    assert a[0].detail["tag"] == "CORE"
+    assert tm.position("BTC", "CORE").stop == 68300.0
+    assert tm.position("BTC", "SCALP").stop == 63250.0
+
+
+def test_dvije_pozicije_isti_par_bez_taga_je_review():
+    tm = TradeManager()
+    tm.process("s1", "BTC Short here\nEntry: 61400-62200\nSL: 63250")
+    tm.process("c1", "BTC long-term short\nEntry: 70000-72000\nSL: 75000")
+    a = tm.process("u1", "Move stop to 64000")        # nema naznake core/scalp
+    assert _kinds(a) == ["NEEDS_REVIEW"]
+    assert "core/scalp" in a[0].detail["reason"]
+    # nista nije promijenjeno
+    assert tm.position("BTC", "SCALP").stop == 63250.0
+    assert tm.position("BTC", "CORE").stop == 75000.0
 
 
 def test_building_bez_para_je_needs_review():

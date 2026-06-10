@@ -16,7 +16,7 @@ from weexbot import Database, TradeManager        # noqa: E402
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 ALL_JSONL = os.path.join(DATA_DIR, "messages_all.jsonl")
-DB_PATH = os.path.join(DATA_DIR, "weex_paper.db")
+DB_PATH = os.path.join(DATA_DIR, "weex_tm.db")     # zaseban od pipeline baze
 
 
 def load_messages():
@@ -62,10 +62,10 @@ def main() -> int:
               "SKIPPED_NOT_LISTED", "NEEDS_REVIEW"):
         if counts.get(k):
             print(f"  {k:14s}: {counts[k]}")
-    print(f"\n  Otvorenih pozicija na kraju: {len(tm.open_positions())}")
-    for p, pos in tm.open_positions().items():
-        print(f"    {p:6s} {pos.side:5s} entry={pos.entry or pos.entry_zone} "
-              f"stop={pos.stop} ostalo={pos.remaining_pct}%")
+    print(f"\n  Otvorenih pozicija na kraju: {len(tm.all_open())}")
+    for pos in tm.all_open():
+        print(f"    {pos.pair:6s} {pos.tag:5s} {pos.side:5s} "
+              f"entry={pos.entry or pos.entry_zone} stop={pos.stop} ostalo={pos.remaining_pct}%")
 
     if args.review:
         print("\n=== NEEDS_REVIEW ===")

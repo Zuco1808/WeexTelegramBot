@@ -145,10 +145,15 @@ Akcije: `OPEN` (kad je nacrt potpun: smjer + ulaz + stop), `MOVE_SL`, `BREAKEVEN
 i stanje pozicija u `tm_positions` (upsert po paru). `run_trade_manager.py` puni
 `data/weex_paper.db`.
 
-**Ograničenja (za iduću iteraciju):** jedna aktivna pozicija po paru (hedge se ne
-modelira); ekstrakcija na vrlo kratkim/malformiranim fragmentima nije savršena, ali
-dvosmislenost uvijek završi kao `NEEDS_REVIEW`, ne kao pogrešna akcija. Brandon (D)
-se i dalje **ne auto-trguje** — TM je za sada korelacijski/analitički sloj.
+**Više pozicija po paru (CORE/SCALP):** Brandon zna držati „long-term core" short
++ „scalp/added" poziciju na istom paru. TM ih drži odvojeno (tag `CORE`/`SCALP`) i
+usmjerava izmjene po naznaci u tekstu („long-term" → CORE, „added/portion" → SCALP).
+Kad par ima dvije pozicije, a izmjena nema naznaku → `NEEDS_REVIEW`.
+
+**Ograničenja (za iduću iteraciju):** ekstrakcija na vrlo kratkim/malformiranim
+fragmentima nije savršena, ali dvosmislenost uvijek završi kao `NEEDS_REVIEW`, ne kao
+pogrešna akcija. Brandon (D) se i dalje **ne auto-trguje** — TM je za sada
+korelacijski/analitički sloj.
 
 **Učinak lifecycle-a na 882 poruke:** otvorenih na kraju **2** (prije 11),
 `NEEDS_REVIEW` **118** (prije 133), od čega dvosmislenost zbog para palo s 118 na **85**.

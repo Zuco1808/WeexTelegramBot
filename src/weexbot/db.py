@@ -80,8 +80,10 @@ CREATE TABLE IF NOT EXISTS audit_log (
 );
 
 -- Trade Manager (Brandon multi-message korelacija)
+-- Kljuc je (pair, tag) jer Brandon zna drzati vise pozicija po paru (CORE/SCALP).
 CREATE TABLE IF NOT EXISTS tm_positions (
-    pair          TEXT PRIMARY KEY,
+    pair          TEXT NOT NULL,
+    tag           TEXT NOT NULL DEFAULT 'SCALP',
     side          TEXT,
     entry         REAL,
     entry_low     REAL,
@@ -91,7 +93,8 @@ CREATE TABLE IF NOT EXISTS tm_positions (
     open_msg      TEXT,
     status        TEXT,
     remaining_pct INTEGER,
-    updated_at    TEXT NOT NULL
+    updated_at    TEXT NOT NULL,
+    PRIMARY KEY (pair, tag)
 );
 
 CREATE TABLE IF NOT EXISTS tm_actions (
@@ -236,22 +239,22 @@ class Database:
         self.conn.commit()
         return cur.lastrowid
 
-    def tm_upsert_position(self, pair: str, side: str | None, entry: float | None,
+    def tm_upsert_position(self, pair: str, tag: str, side: str | None, entry: float | None,
                            entry_zone, stop: float | None, targets: list,
                            open_msg: str | None, status: str, remaining_pct: int) -> None:
         lo, hi = (entry_zone or (None, None))
         self.conn.execute(
             """INSERT INTO tm_positions
-               (pair, side, entry, entry_low, entry_high, stop, targets, open_msg,
+               (pair, tag, side, entry, entry_low, entry_high, stop, targets, open_msg,
                 status, remaining_pct, updated_at)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?)
-               ON CONFLICT(pair) DO UPDATE SET
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+               ON CONFLICT(pair, tag) DO UPDATE SET
                  side=excluded.side, entry=excluded.entry, entry_low=excluded.entry_low,
                  entry_high=excluded.entry_high, stop=excluded.stop,
                  targets=excluded.targets, open_msg=excluded.open_msg,
                  status=excluded.status, remaining_pct=excluded.remaining_pct,
                  updated_at=excluded.updated_at""",
-            (pair, side, entry, lo, hi, stop,
+            (pair, tag, side, entry, lo, hi, stop,
              json.dumps(targets, ensure_ascii=False), open_msg, status,
              remaining_pct, _now()),
         )
