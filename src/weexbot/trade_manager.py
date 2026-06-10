@@ -16,7 +16,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from .config import NON_CRYPTO_SYMBOLS, TM_STALE_TICKS
+from .config import TM_STALE_TICKS
+from .instruments import NOT_LISTED
 from .manual_parser import MessageFacts, extract_facts, is_handled_elsewhere
 
 # Iznad ovoga update poruke smatramo komentarom/naracijom, ne instrukcijom.
@@ -145,9 +146,9 @@ class TradeManager:
             return [TradeAction(mid, "NEEDS_REVIEW", None,
                                 {"reason": reason, "raw": facts.raw[:80]},
                                 confidence=0.3)]
-        if pair in NON_CRYPTO_SYMBOLS:
-            return [TradeAction(mid, "SKIPPED_NON_CRYPTO", pair,
-                                {"reason": "TradFi/roba - nije na WEEX kripto futures"},
+        if pair in NOT_LISTED:
+            return [TradeAction(mid, "SKIPPED_NOT_LISTED", pair,
+                                {"reason": "nije u podrzanoj WEEX listi"},
                                 confidence=1.0)]
         self.current_pair = pair
         draft = self.drafts.setdefault(pair, Draft(pair=pair, open_msg=mid))

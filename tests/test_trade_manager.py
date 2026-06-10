@@ -107,8 +107,8 @@ def test_nepoznat_ticker_ide_u_review_a_ne_otima():
     tm = TradeManager()
     tm.process("b1", "BTC Short here")
     tm.process("b2", "BTC / Entry 64000-65000 / Stop 66000")
-    # vodeci neprepoznat ticker (npr. WTI) -> ne smije oteti BTC poziciju
-    a = tm.process("o1", "WTI Long\nEntry: 87-90\nSL: 78")
+    # vodeci STVARNO neprepoznat ticker (ZZZ) -> ne smije oteti BTC poziciju
+    a = tm.process("o1", "ZZZ Long\nEntry: 87-90\nSL: 78")
     assert _kinds(a) == ["NEEDS_REVIEW"]
     assert tm.open_positions()["BTC"].stop == 66000.0   # BTC netaknut
 
@@ -122,20 +122,30 @@ def test_pairless_fragment_nastavlja_current_pair():
     assert a[0].pair == "BTC"
 
 
-def test_tradfi_se_oznacava_kao_non_crypto():
+def test_nepodrzana_dionica_se_skipa():
+    # PLTR nije u WEEX listi -> SKIPPED_NOT_LISTED
     tm = TradeManager()
     a = tm.process("p1", "PLTR Long\nEntry: 136.5\nSL: 122\nTarget: 156")
-    assert _kinds(a) == ["SKIPPED_NON_CRYPTO"]
+    assert _kinds(a) == ["SKIPPED_NOT_LISTED"]
     assert a[0].pair == "PLTR"
     assert tm.open_positions() == {}
 
 
-def test_tradfi_ne_otima_otvorenu_kripto_poziciju():
+def test_podrzani_tradfi_se_otvara_kao_pozicija():
+    # OIL je sada PODRZAN na WEEX-u -> otvara se normalno (ne skipa se)
+    tm = TradeManager()
+    a = tm.process("o1", "OIL Long\nEntry: 87-90\nSL: 78")
+    assert _kinds(a) == ["OPEN"]
+    assert a[0].pair == "OIL"
+    assert tm.open_positions()["OIL"].side == "LONG"
+
+
+def test_nepodrzana_dionica_ne_otima_kripto_poziciju():
     tm = TradeManager()
     tm.process("b1", "BTC Short here")
     tm.process("b2", "BTC / Entry 64000-65000 / Stop 66000")
-    a = tm.process("o1", "OIL Long\nEntry: 87-90\nSL: 78")
-    assert _kinds(a) == ["SKIPPED_NON_CRYPTO"]
+    a = tm.process("o1", "PLTR Long\nEntry: 136.5\nSL: 122")
+    assert _kinds(a) == ["SKIPPED_NOT_LISTED"]
     assert tm.open_positions()["BTC"].stop == 66000.0   # kripto pozicija netaknuta
 
 

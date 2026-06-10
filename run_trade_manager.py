@@ -59,7 +59,7 @@ def main() -> int:
 
     print("=== Sazetak akcija ===")
     for k in ("OPEN", "MOVE_SL", "BREAKEVEN", "PARTIAL_CLOSE", "CLOSE", "EXPIRE",
-              "SKIPPED_NON_CRYPTO", "NEEDS_REVIEW"):
+              "SKIPPED_NOT_LISTED", "NEEDS_REVIEW"):
         if counts.get(k):
             print(f"  {k:14s}: {counts[k]}")
     print(f"\n  Otvorenih pozicija na kraju: {len(tm.open_positions())}")

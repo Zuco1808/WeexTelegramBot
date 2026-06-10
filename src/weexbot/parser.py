@@ -9,11 +9,8 @@ Format D/E/INFO/UNKNOWN se samo klasificiraju (Trade Manager je Faza 6).
 import re
 
 from .classify import classify
-from .config import (
-    DEFAULT_LEVERAGE_BOT,
-    LEVERAGE_CAP,
-    SKIP_SYMBOLS,
-)
+from .config import DEFAULT_LEVERAGE_BOT, LEVERAGE_CAP
+from .instruments import NOT_LISTED
 from .models import Side, Signal, SignalKind, TakeProfit, TradeStatus
 from .normalize import normalize
 
@@ -161,10 +158,11 @@ def _parse_b(text: str, raw: str) -> Signal:
         notes=["Brandon zona (B) - parsirano, ali se NE trguje u Fazi 1."],
     )
     sig.leverage = _clamp_leverage(lev_lo, sig)
-    # Status: metal -> SKIPPED; inace izvan opsega Faze 1.
-    if pair in SKIP_SYMBOLS:
+    # Status: nepodrzano (PLTR/...) -> SKIPPED; inace izvan opsega Faze 1
+    # (metali/TradFi su sada podrzani, ali B se i dalje ne trguje u Fazi 1).
+    if pair in NOT_LISTED:
         sig.status = TradeStatus.SKIPPED_NO_SYMBOL
-        sig.notes.append(f"{pair} nije na WEEX kripto futures -> SKIPPED_NO_SYMBOL.")
+        sig.notes.append(f"{pair} nije u podrzanoj WEEX listi -> SKIPPED_NO_SYMBOL.")
     else:
         sig.status = TradeStatus.NOT_TRADED_PHASE1
     return sig
@@ -214,6 +212,6 @@ def _validate_direction(sig: Signal) -> None:
 
 def _check_skip_symbol(sig: Signal) -> None:
     base = (sig.pair or "").upper().replace("USDT", "")
-    if base in SKIP_SYMBOLS or (sig.pair or "").upper() in SKIP_SYMBOLS:
+    if base in NOT_LISTED or (sig.pair or "").upper() in NOT_LISTED:
         sig.status = TradeStatus.SKIPPED_NO_SYMBOL
-        sig.notes.append(f"{sig.pair} nije na WEEX kripto futures -> SKIPPED_NO_SYMBOL.")
+        sig.notes.append(f"{sig.pair} nije u podrzanoj WEEX listi -> SKIPPED_NO_SYMBOL.")

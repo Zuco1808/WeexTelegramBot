@@ -36,17 +36,10 @@ TM_STALE_TICKS: int = 40
 MAX_OPEN_POSITIONS: int = 5                 # maks. broj planiranih pozicija
 MAX_PORTFOLIO_MARGIN_PCT: float = 1.0       # maks. ukupna margina kao udio stanja (1.0 = 100%)
 
-# --- Simboli koji NISU dostupni na WEEX kripto futures (dogovoreno: preskoci) ---
-# Metali: zlato/srebro/Tether Gold. Parser ih i dalje parsira i logira,
-# ali ih oznacava statusom SKIPPED_NO_SYMBOL i nikad ne salje nalog.
-SKIP_SYMBOLS: frozenset[str] = frozenset({"XAU", "XAG", "XAUT", "XAGT"})
-
-# TradFi/robe (dionice, indeksi, nafta...) - Brandon ih povremeno dijeli, ali
-# NISU na WEEX kripto futures. Detektiramo ih da bismo ih JASNO oznacili kao
-# preskocene (a ne kao "nepoznat ticker"). Prosiruj po potrebi.
-NON_CRYPTO_SYMBOLS: frozenset[str] = frozenset({
-    "PLTR", "OIL", "GOLD", "SILVER", "NVDA", "TSLA", "AAPL", "MSFT", "AMZN", "META",
-})
+# --- Podrzani simboli (kripto + TradFi/RWA) ---
+# Registar i mapiranja su u instruments.py. WEEX podrzava metale (XAUT/XAG),
+# naftu (XTI), tokenizovane dionice i RWA uz USDT kolateral - vidi instruments.py.
+# Eksplicitno nepodrzano (PLTR/NVDA/TSLA/AMZN/META) -> instruments.NOT_LISTED.
 
 # --- Sto se smije auto-tradeati u Fazi 1 (dogovoreno) ---
 # Samo precizni formati: Jeffrey scalp (A) i bot (C).

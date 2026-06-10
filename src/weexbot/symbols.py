@@ -1,20 +1,15 @@
-"""Mapiranje i validacija simbola za WEEX (Faza 2, paper).
+"""Mapiranje i validacija simbola za WEEX (kripto + TradFi/RWA).
 
-Metali (XAU/XAG/XAUT) -> nisu na WEEX kripto futures (vidi config.SKIP_SYMBOLS).
-Sve *USDT kripto -> dozvoljeno u paper modu.
+Registar i mapiranja su u instruments.py. WEEX podrzava kripto, metale (XAUT/XAG),
+naftu (XTI), tokenizovane dionice i RWA - sve uz USDT kolateral.
 
-NAPOMENA: tocan WEEX REST simbol string (npr. "BTCUSDT" vs "cmt_btcusdt" vs
-"BTC-USDT") potvrdjuje se u Fazi 3 kad dobijemo API pristup. Do tada koristimo
-kanonski oblik (npr. "BTCUSDT") kao placeholder weex_symbol.
+NAPOMENA: tocan WEEX REST simbol string potvrduje se u Fazi 3 uz API pristup.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .config import NON_CRYPTO_SYMBOLS, SKIP_SYMBOLS
-
-# Mjesto za buduce iznimke kad potvrdimo stvarni WEEX format (Faza 3).
-SYMBOL_OVERRIDES: dict[str, str] = {}
+from .instruments import CRYPTO_BASES, NOT_LISTED, tradfi_symbol
 
 
 @dataclass
@@ -30,13 +25,17 @@ def resolve_symbol(pair: str) -> SymbolInfo:
     p = (pair or "").upper().strip()
     base = p[:-4] if p.endswith("USDT") else p
 
-    if base in SKIP_SYMBOLS or p in SKIP_SYMBOLS:
-        return SymbolInfo(p, base, None, False, "Metal/nije na WEEX kripto futures")
-    if base in NON_CRYPTO_SYMBOLS or p in NON_CRYPTO_SYMBOLS:
-        return SymbolInfo(p, base, None, False, "TradFi/roba - nije na WEEX kripto futures")
-    if not p.endswith("USDT"):
-        return SymbolInfo(p, base, None, False, "Nepoznat format para (ocekivano *USDT)")
+    if base in NOT_LISTED or p in NOT_LISTED:
+        return SymbolInfo(p, base, None, False, "Nije u podrzanoj WEEX listi")
 
-    weex_symbol = SYMBOL_OVERRIDES.get(p, p)
-    return SymbolInfo(p, base, weex_symbol, True,
-                      "OK (paper; tocan WEEX format se potvrdjuje u Fazi 3)")
+    sym = tradfi_symbol(base)
+    if sym:
+        return SymbolInfo(p, base, sym, True, "OK (WEEX TradFi/RWA perpetual)")
+
+    if base in CRYPTO_BASES:
+        return SymbolInfo(p, base, base + "USDT", True, "OK (kripto perpetual)")
+
+    if p.endswith("USDT"):
+        return SymbolInfo(p, base, p, True, "OK (paper; WEEX format se potvrdjuje u Fazi 3)")
+
+    return SymbolInfo(p, base, None, False, "Nepoznat format/simbol")

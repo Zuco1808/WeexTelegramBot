@@ -71,10 +71,12 @@ def test_format_c_short_sanity_ok():
 # --------------------------------------------------------------------------- #
 # Format B (zona) - metali se preskacu, crypto se parsira ali NE trguje
 # --------------------------------------------------------------------------- #
-def test_format_b_metal_skipped():
+def test_format_b_metal_je_sada_podrzan_ali_ne_trguje_u_fazi1():
+    # XAUT (zlato) je sada PODRZAN na WEEX-u -> nije vise SKIPPED_NO_SYMBOL,
+    # ali B-zona se i dalje ne trguje u Fazi 1.
     s = parse("XAUT/SHORT 15-40Entry point: 4,750–4,850TP:4,600 / fix 75%move stop to breakeven4,450 / fix 25%SL = 4,880")
     assert s.kind == SignalKind.ZONE
-    assert s.status == TradeStatus.SKIPPED_NO_SYMBOL
+    assert s.status == TradeStatus.NOT_TRADED_PHASE1
     assert s.entry_zone == (4750.0, 4850.0)
     assert s.stop == 4880.0
     assert not s.is_tradable
