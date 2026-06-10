@@ -115,6 +115,15 @@ def test_dvije_pozicije_isti_par_bez_taga_je_review():
     assert tm.position("BTC", "CORE").stop == 75000.0
 
 
+def test_tiered_alokacija_se_cuva_na_poziciji():
+    # PLTR nije podrzan -> umjesto njega koristimo podrzani par za tiered ulaz.
+    tm = TradeManager()
+    a = tm.process("m1", "ETH Long\nEntry:\n1. 1650 - 30%\n2. 1600 - 70%\nSL: 1550")
+    assert _kinds(a) == ["OPEN"]
+    assert a[0].detail["entry_tiers"] == [(1650.0, 30), (1600.0, 70)]
+    assert tm.position("ETH").entry_tiers == [(1650.0, 30), (1600.0, 70)]
+
+
 def test_building_bez_para_je_needs_review():
     tm = TradeManager()
     a = tm.process("m1", "Trying a small LONG here.")

@@ -49,6 +49,7 @@ class Draft:
     side: str | None = None
     entry: float | None = None
     entry_zone: tuple[float, float] | None = None
+    entry_tiers: list[tuple[float, int]] = field(default_factory=list)
     stop: float | None = None
     targets: list[float] = field(default_factory=list)
     open_msg: str | None = None
@@ -68,6 +69,7 @@ class Position:
     stop: float | None
     targets: list[float]
     open_msg: str
+    entry_tiers: list[tuple[float, int]] = field(default_factory=list)  # (cijena, %)
     tag: str = "SCALP"          # SCALP (added/active) | CORE (long-term)
     status: str = "OPEN"        # OPEN | CLOSED | EXPIRED
     remaining_pct: int = 100
@@ -170,6 +172,8 @@ class TradeManager:
             draft.entry = facts.entry
         if facts.entry_zone:
             draft.entry_zone = facts.entry_zone
+        if facts.entry_tiers:
+            draft.entry_tiers = facts.entry_tiers
         if facts.stop_value is not None:          # u buildingu stop je POCETNI
             draft.stop = facts.stop_value
         if facts.targets:
@@ -198,12 +202,12 @@ class TradeManager:
                                          {"tag": tag, "reason": "reopened/replaced"}))
         pos = Position(pair=pair, side=draft.side, entry=draft.entry,
                        entry_zone=draft.entry_zone, stop=draft.stop, targets=draft.targets,
-                       open_msg=mid, tag=tag, last_tick=self.tick)
+                       entry_tiers=draft.entry_tiers, open_msg=mid, tag=tag, last_tick=self.tick)
         lst.append(pos)
         del self.drafts[key]
         return extra + [TradeAction(mid, "OPEN", pair, {
             "tag": tag, "side": pos.side, "entry": pos.entry, "entry_zone": pos.entry_zone,
-            "stop": pos.stop, "targets": pos.targets,
+            "entry_tiers": pos.entry_tiers, "stop": pos.stop, "targets": pos.targets,
         })]
 
     # ------------------------------------------------------------------ #

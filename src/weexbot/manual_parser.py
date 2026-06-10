@@ -46,6 +46,7 @@ class MessageFacts:
     side: str | None = None              # LONG / SHORT
     entry: float | None = None
     entry_zone: tuple[float, float] | None = None
+    entry_tiers: list[tuple[float, int]] = field(default_factory=list)  # (cijena, %)
     stop_value: float | None = None
     stop_is_move: bool = False           # "stop TO x" / "now it will be at x" / "SL - x"
     targets: list[float] = field(default_factory=list)
@@ -119,13 +120,33 @@ def _find_side(text: str) -> str | None:
     return m.group(1).upper() if m else None
 
 
-def _find_entry(text: str):
+# Tiered ulaz s alokacijom: "1. 136.5 - 30%   2. 128 - 70%"
+_ENTRY_TIER = re.compile(r"\d+\.\s*(" + _NUM + r")\s*-\s*(\d{1,3})\s*%")
+
+
+def _entry_section(text: str) -> str:
+    """Tekst nakon 'Entry...' kljuca, odrezan na prvom SL/Stop/Target/TP."""
     m = re.search(r"\bentr(?:y|ies)\b(?:\s*(?:zone|range|point|levels?))?\s*:?\s*(?P<rest>.*)",
                   text, re.I)
     if not m:
+        return ""
+    return re.split(r"\b(sl|stop|stoploss|target|targets|tp)\b", m.group("rest"), flags=re.I)[0]
+
+
+def _find_entry_tiers(text: str) -> list[tuple[float, int]]:
+    """Lista (cijena, postotak) za tiered ulaze; prazno ako nema alokacija."""
+    out: list[tuple[float, int]] = []
+    for m in _ENTRY_TIER.finditer(_entry_section(text)):
+        price = _to_float(m.group(1))
+        if price is not None:
+            out.append((price, int(m.group(2))))
+    return out
+
+
+def _find_entry(text: str):
+    rest = _entry_section(text)
+    if not rest:
         return None, None
-    # gledaj samo do prvog SL/Stop/Target/TP kljuca
-    rest = re.split(r"\b(sl|stop|stoploss|target|targets|tp)\b", m.group("rest"), flags=re.I)[0]
 
     # tiered ulaz s alokacijom: "1. 136.5 - 30%  2. 128 - 70%"
     tiered = re.findall(r"\d+\.\s*(" + _NUM + r")\s*-\s*\d+\s*%", rest)
@@ -225,6 +246,7 @@ def extract_facts(raw: str) -> MessageFacts:
         side=_find_side(text),
         entry=entry,
         entry_zone=zone,
+        entry_tiers=_find_entry_tiers(text),
         stop_value=stop_val,
         stop_is_move=stop_move,
         targets=_find_targets(text),

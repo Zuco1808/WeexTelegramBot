@@ -98,3 +98,14 @@ def test_tiered_entry_s_alokacijom():
     assert f.entry_zone == (136.5, 128.0)
     assert f.stop_value == 122.0
     assert f.targets == [156.0]
+
+
+def test_tiered_entry_alokacijski_postoci():
+    # #3: hvatamo i postotke po ulazu
+    f = extract_facts("PLTR Long\nEntry:\n1. 136.5 - 30%\n2. 128 - 70%\nSL: 122\nTarget: 156")
+    assert f.entry_tiers == [(136.5, 30), (128.0, 70)]
+
+
+def test_obican_ulaz_nema_tierova():
+    f = extract_facts("BTC Short\nEntry: 62200-64300\nSL: 66300")
+    assert f.entry_tiers == []
