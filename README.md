@@ -189,6 +189,34 @@ python run_weex_demo.py     # signal -> orders -> izvršenje na PaperWeexClient 
 formata potpisa i točnog simbol stringa iz WEEX dokumentacije, te WS/REST price feed
 (da `feed_price` puni stvarne cijene umjesto demo vrijednosti).
 
+### WEEX API ključevi
+
+Ključevi se **nikad ne stavljaju u kod** — čitaju se iz okruženja preko
+`config.weex_credentials()` / `RestWeexClient.from_env()`.
+
+1. Na WEEX-u: **API Management → Create API** (Trade ovlasti za futures; preporuka:
+   ograniči na IP allowlist, bez withdraw ovlasti).
+2. Kopiraj `.env.example` u `.env` i popuni:
+
+   ```dotenv
+   WEEX_API_KEY=tvoj_api_key
+   WEEX_API_SECRET=tvoj_api_secret
+   WEEX_BASE_URL=https://...        # potvrditi iz službene WEEX API dokumentacije
+   ```
+
+3. `.env` je u `.gitignore` — ne commitati ga. Učitaj ga prije pokretanja
+   (npr. `python-dotenv`, ili izvozom varijabli u shellu).
+
+```powershell
+# PowerShell (jednokratno u sesiji)
+$env:WEEX_API_KEY="..."; $env:WEEX_API_SECRET="..."; $env:WEEX_BASE_URL="https://..."
+python -c "from weexbot.weex import RestWeexClient; RestWeexClient.from_env()"  # validira ključeve
+```
+
+> Bez ključeva sve radi u paper modu (`PaperWeexClient`). `RestWeexClient` baca
+> `ValueError` ako ključevi/`WEEX_BASE_URL` nisu postavljeni, a mrežne metode su još
+> `NotImplementedError` dok se ne potvrde endpointi/potpis iz WEEX dokumentacije.
+
 ## Sljedeće
 
 Live: popuniti `RestWeexClient` (REST + potpis) → price feed (WS) → spojiti TM/pipeline
