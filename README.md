@@ -145,6 +145,11 @@ Akcije: `OPEN` (kad je nacrt potpun: smjer + ulaz + stop), `MOVE_SL`, `BREAKEVEN
 i stanje pozicija u `tm_positions` (upsert po paru). `run_trade_manager.py` puni
 `data/weex_paper.db`.
 
+**Re-entry poruke:** miješan tekst koji zatvara prethodnu poziciju i opisuje novi
+setup („Stopped out. Re-entry now OIL. Entry… TP… SL…") → zatvori prethodnu
+(stopped out) + novi setup u `NEEDS_REVIEW` (management plana se NE primjenjuje na
+staru poziciju).
+
 **Više pozicija po paru (CORE/SCALP):** Brandon zna držati „long-term core" short
 + „scalp/added" poziciju na istom paru. TM ih drži odvojeno (tag `CORE`/`SCALP`) i
 usmjerava izmjene po naznaci u tekstu („long-term" → CORE, „added/portion" → SCALP).

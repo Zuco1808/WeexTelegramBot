@@ -124,6 +124,22 @@ def test_tiered_alokacija_se_cuva_na_poziciji():
     assert tm.position("ETH").entry_tiers == [(1650.0, 30), (1600.0, 70)]
 
 
+def test_reentry_zatvara_staru_i_flaga_novi_setup():
+    # #5: "Stopped out. Re-entry now OIL. Entry... TP1... SL..."
+    tm = TradeManager()
+    tm.process("m1", "BTC Long")
+    tm.process("m2", "BTC / Entry 67000 / Stop 65000")
+    a = tm.process("m3", "Stopped out.\nRe-entry now OIL.\nEntry: 87\nSecond entry: 82\n"
+                         "TP1: 96 - take 50%, move stop to breakeven\nSL: 78.8")
+    kinds = _kinds(a)
+    assert "CLOSE" in kinds              # stara BTC zatvorena (stopped out)
+    assert "NEEDS_REVIEW" in kinds       # novi OIL setup -> rucni pregled
+    assert "BTC" not in tm.open_positions()
+    # management novog plana NIJE primijenjen kao izmjena na staru poziciju
+    assert "PARTIAL_CLOSE" not in kinds
+    assert "MOVE_SL" not in kinds
+
+
 def test_building_bez_para_je_needs_review():
     tm = TradeManager()
     a = tm.process("m1", "Trying a small LONG here.")

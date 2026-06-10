@@ -24,6 +24,9 @@ from .manual_parser import MessageFacts, extract_facts, is_handled_elsewhere
 # Iznad ovoga update poruke smatramo komentarom/naracijom, ne instrukcijom.
 _NARRATIVE_LEN = 200
 
+# Miksana poruka: zatvaranje prethodne + opis novog setupa ("re-entry now ...").
+_REENTRY = re.compile(r"re-?entry|re-?enter|re-?open", re.I)
+
 # Naznake koja je pod-pozicija u pitanju.
 _CORE_HINT = re.compile(r"long[\s-]?term|core position|main channel|core short|core long", re.I)
 _ADDED_HINT = re.compile(r"\badded\b|the portion|portion (?:i|you) added|whatever you added|"
@@ -105,7 +108,11 @@ class TradeManager:
             return self._finish(out)
 
         facts = extract_facts(text)
-        if facts.is_building:
+        # miksana "stopped out + re-entry novi setup" poruka -> poseban put
+        if (facts.close and _REENTRY.search(text)
+                and (facts.entry is not None or facts.entry_zone)):
+            out += self._handle_reentry(message_id, facts)
+        elif facts.is_building:
             out += self._handle_building(message_id, facts)
         elif facts.has_update and len(text) <= _NARRATIVE_LEN:
             # kratke poruke = instrukcije; duga proza = komentar -> ignoriraj
@@ -209,6 +216,27 @@ class TradeManager:
             "tag": tag, "side": pos.side, "entry": pos.entry, "entry_zone": pos.entry_zone,
             "entry_tiers": pos.entry_tiers, "stop": pos.stop, "targets": pos.targets,
         })]
+
+    def _handle_reentry(self, mid: str, facts: MessageFacts) -> list[TradeAction]:
+        """Poruka koja zatvara prethodnu poziciju I opisuje novi setup.
+
+        Sigurno: zatvori prethodnu (stopped out) ako je jednoznacna, a NOVI setup
+        salji u rucni pregled - tako management-tekst novog plana (take 50%,
+        breakeven, close rest) NE padne kao izmjena na staru poziciju.
+        """
+        out: list[TradeAction] = []
+        opens = self.all_open()
+        if len(opens) == 1:
+            opens[0].status = "CLOSED"
+            out.append(TradeAction(mid, "CLOSE", opens[0].pair,
+                                   {"tag": opens[0].tag, "reason": "stopped out (re-entry poruka)"}))
+        new_pair = facts.pairs[0] if facts.pairs else None
+        out.append(TradeAction(mid, "NEEDS_REVIEW", new_pair, {
+            "reason": "re-entry: novi setup u poruci sa zatvaranjem - otvori rucno",
+            "entry": facts.entry or facts.entry_zone, "stop": facts.stop_value,
+            "targets": facts.targets, "raw": facts.raw[:80],
+        }, confidence=0.4))
+        return out
 
     # ------------------------------------------------------------------ #
     def _open_for(self, pair: str) -> list[Position]:
