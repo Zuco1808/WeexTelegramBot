@@ -48,7 +48,7 @@ Sve niže gradi na postojećem: `weex/WeexClient` (ABC, isti potpis za paper i l
 - [ ] Provjera pravila iz Poruke 1: likvidacija ne smije biti bliža od SL-a.
 - **Acceptance:** end-to-end jedan realni mali trade uz ručnu potvrdu; zapis u `audit_log`.
 
-## 3.6 — Live Telegram ingestion (Telethon)
+## 3.6 — Live Telegram ingestion (Telethon)  🟡 IMPLEMENTIRANO (SignalRouter + run_telegram.py)
 - [ ] Telethon klijent sluša kanal → `pipeline.process` (A/C) i `TradeManager.process` (D/E).
 - [ ] Dedup po `message_id`, reconnect, rate-limit.
 - [ ] **Napomena:** Telethon koristi osobni account — potvrditi je li OK ili Bot API.

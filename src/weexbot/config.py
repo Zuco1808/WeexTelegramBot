@@ -18,6 +18,14 @@ def weex_credentials() -> tuple[str | None, str | None, str | None]:
             os.environ.get("WEEX_API_SECRET"),
             os.environ.get("WEEX_API_PASSPHRASE"))
 
+
+# --- Telegram (Faza 3.6, ingest preko Telethona) ---
+def telegram_config() -> tuple[str | None, str | None, str | None]:
+    """(api_id, api_hash, channel) iz env-a. api_id/hash s my.telegram.org."""
+    return (os.environ.get("TELEGRAM_API_ID"),
+            os.environ.get("TELEGRAM_API_HASH"),
+            os.environ.get("TELEGRAM_CHANNEL"))
+
 # --- Risk / kapital (dogovoreno) ---
 CAPITAL_USDT: float = 100.0       # pocetni simulacijski kapital
 RISK_PCT_SCALP: float = 0.01      # 1% rizika po scalp signalu (Jeffrey + bot)

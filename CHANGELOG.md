@@ -58,6 +58,9 @@ aktivnom razvoju (pre-1.0); verzije nisu još taggane.
   zatvorenih (`close_long`/`close_short`, `totalProfits`) u `trades` ledger (dedup po
   `order_id`/`ext_id`) → **dashboard prikazuje stvarni PnL**. `run_reconcile.py`
   (→ `data/weex_live.db`), `run_reports.py --db weex_live.db`.
+- **3.6 TELEGRAM INGEST:** `SignalRouter` (čista logika: dedup, parse, ruta A/C→izvršitelj
+  semi-auto / D/E→Trade Manager / chatter→ignore). `run_telegram.py` (Telethon transport,
+  lazy import) — default **semi-auto** (javi plan), `--auto` šalje u bandu, `--backfill N`.
 
 ### Opseg
 - Auto-trade u Fazi 1: **samo** Jeffrey (A) + bot (C), sve kripto-USDT.

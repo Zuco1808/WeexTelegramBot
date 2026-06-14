@@ -5,3 +5,6 @@ pytest>=8.0               # testovi parsera (Faza 1)
 # Napomena: parser biblioteka (src/weexbot) NEMA vanjskih ovisnosti -
 # koristi samo Python standardnu biblioteku (re, dataclasses).
 # bs4 treba SAMO ekstraktor (extract_messages.py).
+
+# Faza 3.6 - live Telegram ingest (samo za run_telegram.py):
+telethon>=1.34
