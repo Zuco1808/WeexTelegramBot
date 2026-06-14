@@ -82,6 +82,13 @@ class RestWeexClient(WeexClient):
         except urllib.error.URLError as e:
             raise WeexAPIError(f"Mrezna greska {method} {path}: {e.reason}") from None
 
+    # --- simboli --------------------------------------------------------- #
+    @staticmethod
+    def _v2_symbol(symbol: str) -> str:
+        """Kanonski 'BTCUSDT' -> WEEX v2 contract format 'cmt_btcusdt'."""
+        s = (symbol or "").strip()
+        return s if s.lower().startswith("cmt_") else "cmt_" + s.lower()
+
     # --- READ-ONLY (Faza 3.1) --------------------------------------------- #
     def server_time(self) -> dict:
         return self._request("GET", "/capi/v2/market/time")
@@ -91,7 +98,11 @@ class RestWeexClient(WeexClient):
         return self._request("GET", "/capi/v3/market/exchangeInfo", params=params)
 
     def ticker(self, symbol: str) -> dict:
-        return self._request("GET", "/capi/v2/market/ticker", params={"symbol": symbol})
+        return self._request("GET", "/capi/v2/market/ticker",
+                             params={"symbol": self._v2_symbol(symbol)})
+
+    def tickers(self) -> dict:
+        return self._request("GET", "/capi/v2/market/tickers")
 
     def account_assets(self) -> dict:
         return self._request("GET", "/capi/v2/account/assets", auth=True)

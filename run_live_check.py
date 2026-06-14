@@ -59,8 +59,9 @@ def main() -> int:
 
     print(f"Base URL: {client.base_url}  |  API key: ...{client.api_key[-4:]}")
     show("Server time (javno)", client.server_time)
-    show(f"Ticker {args.symbol} (javno)", lambda: client.ticker(args.symbol))
-    print(f"\nmark_price({args.symbol}) = {client.mark_price(args.symbol)}")
+    show(f"Ticker {args.symbol} -> {client._v2_symbol(args.symbol)} (javno)",
+         lambda: client.ticker(args.symbol))
+    show(f"mark_price({args.symbol})", lambda: client.mark_price(args.symbol))
     show("Account assets (auth)", client.account_assets)
     show("Positions (auth)", client.raw_positions)
 

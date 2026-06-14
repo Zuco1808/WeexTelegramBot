@@ -54,3 +54,9 @@ def test_sign_se_mijenja_s_porukom():
     a = c._sign("1700000000000", "GET", "/capi/v2/market/time")
     b = c._sign("1700000000000", "POST", "/capi/v2/order/placeOrder", '{"x":1}')
     assert a != b
+
+
+def test_v2_symbol_konverzija():
+    assert RestWeexClient._v2_symbol("BTCUSDT") == "cmt_btcusdt"
+    assert RestWeexClient._v2_symbol("XAUTUSDT") == "cmt_xautusdt"
+    assert RestWeexClient._v2_symbol("cmt_btcusdt") == "cmt_btcusdt"   # vec konvertirano
