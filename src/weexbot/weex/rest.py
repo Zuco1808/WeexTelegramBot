@@ -24,9 +24,6 @@ import urllib.request
 from ..config import WEEX_BASE_URL, weex_credentials
 from .client import OrderRequest, OrderResult, PaperPosition, WeexClient
 
-_WRITE_TODO = ("Faza 3.2: pisanje (place/cancel/leverage) implementira se nakon "
-               "read-only validacije i potvrde tocnih parametara naloga iz WEEX docs.")
-
 
 class WeexAPIError(RuntimeError):
     pass
@@ -127,18 +124,85 @@ class RestWeexClient(WeexClient):
                     pass
         return None
 
-    # --- WRITE (Faza 3.2 - jos ne) ---------------------------------------- #
-    def set_leverage(self, symbol: str, leverage: float, margin_mode: str = "isolated") -> None:
-        raise NotImplementedError(_WRITE_TODO)
+    # --- WRITE (Faza 3.2) ------------------------------------------------- #
+    # type: open long / open short / close long (sell reduce) / close short (buy reduce)
+    _TYPE = {("BUY", False): "1", ("SELL", False): "2",
+             ("SELL", True): "3", ("BUY", True): "4"}
+
+    @staticmethod
+    def _fmt(x) -> str:
+        if isinstance(x, float):
+            return f"{x:.10f}".rstrip("0").rstrip(".")
+        return str(x)
+
+    @staticmethod
+    def _clean_oid(oid: str) -> str:
+        return "".join(ch for ch in (oid or "") if ch.isalnum())[:40]
+
+    def _leverage_body(self, symbol: str, leverage: float, margin_mode: str) -> dict:
+        mm = 3 if margin_mode == "isolated" else 1
+        return {"symbol": self._v2_symbol(symbol), "marginMode": mm,
+                "longLeverage": str(int(leverage)), "shortLeverage": str(int(leverage))}
+
+    def _order_body(self, req: OrderRequest) -> dict:
+        body = {
+            "symbol": self._v2_symbol(req.symbol),
+            "client_oid": self._clean_oid(req.client_order_id or f"wx{int(time.time()*1000)}"),
+            "size": self._fmt(req.quantity),
+            "type": self._TYPE[(req.side, req.reduce_only)],
+            "order_type": "0",                       # normal
+            "match_price": "1" if req.otype == "MARKET" else "0",
+            "marginMode": 3,                         # isolated
+        }
+        if body["match_price"] == "0":
+            body["price"] = self._fmt(req.price)
+        return body
+
+    def set_leverage(self, symbol: str, leverage: float, margin_mode: str = "isolated") -> dict:
+        return self._request("POST", "/capi/v2/account/leverage",
+                             body=self._leverage_body(symbol, leverage, margin_mode), auth=True)
 
     def place_order(self, req: OrderRequest) -> OrderResult:
-        raise NotImplementedError(_WRITE_TODO)
+        resp = self._request("POST", "/capi/v2/order/placeOrder",
+                             body=self._order_body(req), auth=True)
+        data = resp.get("data", {}) if isinstance(resp, dict) else {}
+        oid = data.get("orderId") or data.get("order_id") if isinstance(data, dict) else None
+        coid = self._clean_oid(req.client_order_id or "")
+        return OrderResult(client_order_id=coid, status="SUBMITTED",
+                           filled_price=None, message=json.dumps(resp, ensure_ascii=False))
 
-    def cancel_order(self, client_order_id: str) -> OrderResult:
-        raise NotImplementedError(_WRITE_TODO)
+    def cancel_order(self, client_order_id: str, symbol: str | None = None) -> OrderResult:
+        body: dict = {"clientOid": self._clean_oid(client_order_id)}
+        if symbol:
+            body["symbol"] = self._v2_symbol(symbol)
+        resp = self._request("POST", "/capi/v2/order/cancel_order", body=body, auth=True)
+        return OrderResult(client_order_id=client_order_id, status="CANCEL_SENT",
+                           message=json.dumps(resp, ensure_ascii=False))
 
     def open_orders(self, symbol: str | None = None) -> list[OrderResult]:
-        raise NotImplementedError(_WRITE_TODO)
+        resp = self.raw_open_orders(symbol)
+        rows = resp.get("data", resp) if isinstance(resp, dict) else resp
+        rows = rows if isinstance(rows, list) else []
+        out = []
+        for r in rows:
+            out.append(OrderResult(
+                client_order_id=str(r.get("client_oid") or r.get("clientOid") or ""),
+                status=str(r.get("status", "")), message=json.dumps(r, ensure_ascii=False)))
+        return out
 
     def positions(self) -> list[PaperPosition]:
-        raise NotImplementedError("Koristi raw_positions() za read-only; tipizirano u Fazi 3.2.")
+        resp = self.raw_positions()
+        rows = resp.get("data", resp) if isinstance(resp, dict) else resp
+        rows = rows if isinstance(rows, list) else []
+        out = []
+        for r in rows:
+            try:
+                qty = float(r.get("size") or r.get("total") or 0)
+            except (TypeError, ValueError):
+                qty = 0.0
+            out.append(PaperPosition(
+                symbol=str(r.get("symbol", "")),
+                side="LONG" if str(r.get("side", "")).lower() in ("long", "1") else "SHORT",
+                quantity=qty, entry_price=float(r.get("averageOpenPrice") or 0) or 0.0,
+                leverage=float(r.get("leverage") or 0) or None))
+        return out

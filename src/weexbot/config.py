@@ -27,6 +27,10 @@ RISK_PCT_INTRADAY: float = 0.015  # 1.5% (Brandon zone - Faza 2)
 LEVERAGE_CAP: float = 10.0        # globalni hard-cap; nikad ne saljemo vise
 DEFAULT_LEVERAGE_BOT: float = 5.0  # bot (Format C) ne salje leverage -> default
 
+# --- Live odabir korisnika (14.06.2026) ---
+RISK_PCT_LIVE: float = 0.02       # 2% rizika po trejdu na live-u
+MARGIN_MODE: str = "isolated"     # WEEX marginMode 3 (isolated)
+
 # --- Trade Manager lifecycle ---
 # Pozicija neaktivna vise od ovoliko OBRADENIH poruka smatra se zatvorenom
 # (heuristika; Brandon cesto ne posalje eksplicitni close). Smanjuje gomilanje
