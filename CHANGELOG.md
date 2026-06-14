@@ -40,6 +40,17 @@ aktivnom razvoju (pre-1.0); verzije nisu još taggane.
 - Nepoznat ticker više ne preuzima tuđu poziciju (→ `NEEDS_REVIEW`).
 - Bolja detekcija zatvaranja (`full close`, `closing…completely`).
 
+### Faza 3 (live, u tijeku)
+- **3.1 READ-ONLY (gotovo, uživo):** `RestWeexClient` (WEEX contract API, Bitget-stil
+  potpis: `base64(HMAC_SHA256(secret, ts+METHOD+path+body))`, headeri ACCESS-KEY/SIGN/
+  PASSPHRASE/TIMESTAMP). Dvije sheme simbola: v3 `BTCUSDT`, v2 `cmt_btcusdt`. Metode:
+  server_time, ticker/mark_price, account_assets, raw_positions, exchange_info,
+  raw_open_orders. `run_live_check.py` validacija.
+- **3.2 WRITE (gotovo, uživo):** `set_leverage` (isolated), `place_order` (type 1/2/3/4,
+  limit/market, marginMode isolated, preset SL/TP podržan), `cancel_order`, tipizirani
+  `open_orders`/`positions`. Potvrđeno uživo malim limitom (place→cancel). **Jedinica
+  `size` = bazni coin** (WEEX računa ugovore = size/contractVal). `run_live_order_test.py`.
+
 ### Opseg
 - Auto-trade u Fazi 1: **samo** Jeffrey (A) + bot (C), sve kripto-USDT.
-- Sve paper/lokalno (bez WEEX API ključeva). 187 testova.
+- Live: semi-auto + sićušan iznos; cap x10, rizik 2%, isolated. 201 test.

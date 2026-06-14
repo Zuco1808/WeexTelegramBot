@@ -17,14 +17,14 @@ Sve niže gradi na postojećem: `weex/WeexClient` (ABC, isti potpis za paper i l
 - [ ] Demo/testnet okruženje ako postoji (inače: read-only + minimalni iznos na live).
 - **Rezultat:** `.env` popunjen; `RestWeexClient.from_env()` ne baca `ValueError`.
 
-## 3.1 — REST klijent: read-only prvo
+## 3.1 — REST klijent: read-only prvo  ✅ GOTOVO (uživo)
 - [ ] `_request()` u `RestWeexClient`: `httpx`, timestamp, `_sign()`, headeri, parsiranje.
 - [ ] Implementiraj **samo čitanje**: `mark_price()`, `positions()`, `open_orders()`.
 - [ ] Rukovanje greškama: rate-limit (429), retry s backoffom, jasne iznimke.
 - **Acceptance:** dohvat cijene i (praznih) pozicija s live accounta; ništa se ne mijenja.
 - **Test:** integracijski test iza `WEEX_LIVE_TESTS=1` flaga (ne u CI bez ključeva).
 
-## 3.2 — REST klijent: pisanje (na demo / sićušan iznos)
+## 3.2 — REST klijent: pisanje (na demo / sićušan iznos)  ✅ GOTOVO (uživo: place→cancel)
 - [ ] `set_leverage()` (+ isolated margin), `place_order()`, `cancel_order()`.
 - [ ] Mapiranje simbola preko `instruments.resolve_symbol` (već postoji).
 - [ ] Idempotentnost: `client_order_id` iz `paper_broker.build_orders` (već postoji).
