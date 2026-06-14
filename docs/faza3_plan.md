@@ -54,7 +54,7 @@ Sve niže gradi na postojećem: `weex/WeexClient` (ABC, isti potpis za paper i l
 - [ ] **Napomena:** Telethon koristi osobni account — potvrditi je li OK ili Bot API.
 - **Acceptance:** poruke stižu u realnom vremenu i ispravno se rutiraju.
 
-## 3.7 — Ops & go-live
+## 3.7 — Ops & go-live  🟡 SIGURNOST GOTOVA (kill-switch/dnevni stop/limit); ostaje VPS deploy
 - [ ] **Kill-switch** (zaustavi sve, otkaži otvorene naloge).
 - [ ] Limit istovremene izloženosti (već u pipeline-u) + dnevni gubitak stop.
 - [ ] Strukturirano logiranje + alarmi (Telegram/email) na greške i fill-ove.

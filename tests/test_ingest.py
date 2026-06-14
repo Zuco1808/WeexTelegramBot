@@ -84,3 +84,18 @@ def test_brandon_d_ide_u_trade_manager():
 def test_tradable_bez_executora():
     r, _ = _router(executor=None)
     assert r.handle("m1", _JEFFREY).action == "TRADABLE_NOEXEC"
+
+
+def test_auto_blokiran_safety_gateom():
+    from weexbot.safety import GateResult
+
+    class BlockGate:
+        def check(self):
+            return GateResult(False, "kill-switch aktivan")
+
+    fe = FakeExecutor(in_band=True)
+    db = Database(":memory:")
+    r = SignalRouter(db, TradeManager(), executor=fe, mode="auto", gate=BlockGate())
+    res = r.handle("m1", _JEFFREY)
+    assert res.action == "BLOCKED"
+    assert fe.placed == []                     # gate je sprijecio slanje

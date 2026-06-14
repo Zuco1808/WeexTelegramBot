@@ -61,6 +61,10 @@ aktivnom razvoju (pre-1.0); verzije nisu još taggane.
 - **3.6 TELEGRAM INGEST:** `SignalRouter` (čista logika: dedup, parse, ruta A/C→izvršitelj
   semi-auto / D/E→Trade Manager / chatter→ignore). `run_telegram.py` (Telethon transport,
   lazy import) — default **semi-auto** (javi plan), `--auto` šalje u bandu, `--backfill N`.
+- **3.7 OPS/SIGURNOST:** `safety.py` — **kill-switch** (datoteka), **dnevni stop-loss**
+  (realizirani PnL danas), **limit istovremenih pozicija**; `SafetyGate.check()` blokira
+  slanje prije naloga (u routeru i `run_live_trade`). `run_kill.py` (--on/--off/--status,
+  --cancel otvorenih). Config: `DAILY_LOSS_LIMIT_USDT`, `MAX_CONCURRENT_POSITIONS`.
 
 ### Opseg
 - Auto-trade u Fazi 1: **samo** Jeffrey (A) + bot (C), sve kripto-USDT.

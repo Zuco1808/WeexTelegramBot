@@ -39,6 +39,11 @@ DEFAULT_LEVERAGE_BOT: float = 5.0  # bot (Format C) ne salje leverage -> default
 RISK_PCT_LIVE: float = 0.02       # 2% rizika po trejdu na live-u
 MARGIN_MODE: str = "isolated"     # WEEX marginMode 3 (isolated)
 
+# --- Sigurnost (Faza 3.7) ---
+DAILY_LOSS_LIMIT_USDT: float = 5.0   # zaustavi nove trejdove ako dnevni gubitak prijede ovo
+MAX_CONCURRENT_POSITIONS: int = 5    # maks. istovremeno otvorenih live pozicija
+KILL_FILE_NAME: str = "KILL"         # data/KILL -> blokira sve naloge
+
 # --- Trade Manager lifecycle ---
 # Pozicija neaktivna vise od ovoliko OBRADENIH poruka smatra se zatvorenom
 # (heuristika; Brandon cesto ne posalje eksplicitni close). Smanjuje gomilanje

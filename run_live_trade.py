@@ -60,8 +60,9 @@ def main():
     args = ap.parse_args()
 
     load_env(os.path.join(ROOT, ".env"))
-    from weexbot import parse
+    from weexbot import Database, parse
     from weexbot.live_executor import LiveExecutor
+    from weexbot.safety import SafetyGate
     from weexbot.weex import RestWeexClient
     from weexbot.weex.rest import WeexAPIError
 
@@ -82,6 +83,15 @@ def main():
     if not args.yes:
         print("\nNije proslijedjen --yes. NISTA nije poslano.")
         return 0
+
+    # sigurnosni gate (kill-switch / dnevni stop / limit pozicija)
+    db = Database(os.path.join(ROOT, "data", "weex_live.db"))
+    gate = SafetyGate(db, os.path.join(ROOT, "data", "KILL"),
+                      count_open=lambda: len(client.positions()))
+    g = gate.check()
+    if not g.ok:
+        print(f"\nBLOKIRANO (safety): {g.reason}. Nista nije poslano.")
+        return 1
 
     coid = f"sig{int(time.time())}"
     try:

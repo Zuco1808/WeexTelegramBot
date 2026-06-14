@@ -27,12 +27,14 @@ class RouterResult:
 
 
 class SignalRouter:
-    def __init__(self, db, trade_manager, executor=None, mode: str = "notify", on_plan=None):
+    def __init__(self, db, trade_manager, executor=None, mode: str = "notify",
+                 on_plan=None, gate=None):
         self.db = db
         self.tm = trade_manager
         self.executor = executor          # LiveExecutor ili None
         self.mode = mode                  # "notify" (semi-auto) | "auto"
         self.on_plan = on_plan            # callback(message_id, signal, plan) za obavijest
+        self.gate = gate                  # SafetyGate ili None
 
     def handle(self, message_id: str, text: str, msg_date: str | None = None) -> RouterResult:
         if self.db.signal_exists(message_id):
@@ -68,12 +70,21 @@ class SignalRouter:
             except Exception:             # obavijest ne smije srusiti ingest
                 pass
 
-        if self.mode == "auto" and plan.in_band:
+        gate = self.gate.check() if self.gate else None
+        blocked = gate is not None and not gate.ok
+
+        if self.mode == "auto" and plan.in_band and not blocked:
             res = self.executor.place(plan, client_order_id=f"sig{int(time.time())}")
             self.db.audit("auto_placed", message_id,
                           {"symbol": plan.symbol, "qty": plan.quantity})
             return RouterResult(message_id, "PLACED",
                                 {"symbol": plan.symbol, "result": getattr(res, "status", "")})
+
+        if blocked:
+            self.db.audit("blocked", message_id,
+                          {"symbol": plan.symbol, "reason": gate.reason})
+            return RouterResult(message_id, "BLOCKED",
+                                {"symbol": plan.symbol, "reason": gate.reason})
 
         # semi-auto: samo javi plan, ne salji
         self.db.audit("plan_notify", message_id,

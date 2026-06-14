@@ -80,10 +80,16 @@ def main():
         print("Nedostaju TELEGRAM_API_ID / TELEGRAM_API_HASH / TELEGRAM_CHANNEL u .env")
         return 1
 
+    from weexbot.safety import SafetyGate
     db = Database(os.path.join(ROOT, "data", "weex_live.db"))
-    router = SignalRouter(db, TradeManager(db=db), executor=build_executor(),
-                          mode="auto" if args.auto else "notify", on_plan=on_plan)
-    print(f"Mod: {'AUTO (salje u bandu)' if args.auto else 'SEMI-AUTO (samo javlja)'}")
+    executor = build_executor()
+    count_open = (lambda: len(executor.client.positions())) if executor else None
+    gate = SafetyGate(db, os.path.join(ROOT, "data", "KILL"), count_open=count_open)
+    router = SignalRouter(db, TradeManager(db=db), executor=executor,
+                          mode="auto" if args.auto else "notify",
+                          on_plan=on_plan, gate=gate)
+    print(f"Mod: {'AUTO (salje u bandu)' if args.auto else 'SEMI-AUTO (samo javlja)'}  "
+          f"(kill-switch + dnevni stop + limit pozicija aktivni)")
 
     client = TelegramClient(os.path.join(ROOT, "data", "tg_session"), int(api_id), api_hash)
 
