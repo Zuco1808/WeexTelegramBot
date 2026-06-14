@@ -25,7 +25,6 @@ from weexbot import Database                              # noqa: E402
 from weexbot.reports import render_dashboard, to_html, trades_from_rows  # noqa: E402
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
-DB_PATH = os.path.join(DATA_DIR, "weex_reports.db")
 HTML_PATH = os.path.join(DATA_DIR, "report.html")
 
 _SYMBOLS = ["BTCUSDT", "ETHUSDT", "ASTERUSDT", "XAUTUSDT", "XTIUSDT", "AAPLUSDT"]
@@ -53,10 +52,12 @@ def main() -> int:
     ap.add_argument("--seed-demo", action="store_true", help="napuni DEMO trejdove")
     ap.add_argument("--html", action="store_true", help="izvezi data/report.html")
     ap.add_argument("--no-color", action="store_true", help="bez ANSI boja")
+    ap.add_argument("--db", default="weex_reports.db",
+                    help="naziv baze u data/ (npr. weex_live.db za stvarni PnL)")
     args = ap.parse_args()
 
     os.makedirs(DATA_DIR, exist_ok=True)
-    db = Database(DB_PATH)
+    db = Database(os.path.join(DATA_DIR, args.db))
     if args.seed_demo:
         seed_demo(db)
         print("(napunjeni DEMO trejdovi)\n")

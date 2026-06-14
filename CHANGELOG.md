@@ -54,6 +54,10 @@ aktivnom razvoju (pre-1.0); verzije nisu još taggane.
   (2% rizik), per-simbol zaokruživanje (`symbol_spec`), leverage cap isolated, entry
   limit + **preset SL/TP**; entry izvan ±1% banda → čeka da uđe (`--wait`).
   `run_live_trade.py` (semi-auto, `--yes`, safety `--max-notional`).
+- **3.3 RECONCILIATION:** `Reconciler` čita `order_history`, bilježi realizirani PnL
+  zatvorenih (`close_long`/`close_short`, `totalProfits`) u `trades` ledger (dedup po
+  `order_id`/`ext_id`) → **dashboard prikazuje stvarni PnL**. `run_reconcile.py`
+  (→ `data/weex_live.db`), `run_reports.py --db weex_live.db`.
 
 ### Opseg
 - Auto-trade u Fazi 1: **samo** Jeffrey (A) + bot (C), sve kripto-USDT.

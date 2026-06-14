@@ -129,6 +129,11 @@ class RestWeexClient(WeexClient):
         params = {"symbol": self._v2_symbol(symbol)} if symbol else None
         return self._request("GET", "/capi/v2/order/current", params=params, auth=True)
 
+    def order_history(self, symbol: str, page_size: int = 100) -> dict:
+        return self._request("GET", "/capi/v2/order/history",
+                             params={"symbol": self._v2_symbol(symbol),
+                                     "pageSize": page_size}, auth=True)
+
     def account_balance(self, coin: str = "USDT") -> float:
         data = self.account_assets()
         rows = data.get("data", data) if isinstance(data, dict) else data

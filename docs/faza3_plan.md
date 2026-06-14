@@ -31,7 +31,7 @@ Sve niže gradi na postojećem: `weex/WeexClient` (ABC, isti potpis za paper i l
 - **Acceptance:** postavi → provjeri → otkaži limit nalog daleko od cijene; 0 zaostalih naloga.
 - **Sigurnost:** tvrdi limiti (min notional, max leverage `LEVERAGE_CAP`).
 
-## 3.3 — Reconciliation & lifecycle s burze
+## 3.3 — Reconciliation & lifecycle s burze  🟡 IMPLEMENTIRANO (čeka live potvrdu polja)
 - [ ] Na live-u SL/TP su **pravi reduce-only nalozi** na burzi; ne simuliramo `feed_price`.
 - [ ] User-data stream (WS) ili polling: pratiti fill-ove, zatvaranja, partial fill.
 - [ ] Sinkronizacija stanja na startu (pozicije/nalozi iz burze → naša baza).

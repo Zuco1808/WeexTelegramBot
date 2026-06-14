@@ -90,7 +90,8 @@ CREATE TABLE IF NOT EXISTS trades (
     pnl         REAL NOT NULL,
     opened_at   TEXT,
     closed_at   TEXT NOT NULL,
-    source      TEXT
+    source      TEXT,
+    ext_id      TEXT
 );
 
 -- Trade Manager (Brandon multi-message korelacija)
@@ -133,8 +134,16 @@ class Database:
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA foreign_keys = ON")
         self.conn.executescript(SCHEMA)
+        self._migrate()
         self._ensure_account(starting_balance)
         self.conn.commit()
+
+    def _migrate(self) -> None:
+        # dodaj ext_id na stare trades tablice (dedup za live reconciliation)
+        try:
+            self.conn.execute("ALTER TABLE trades ADD COLUMN ext_id TEXT")
+        except sqlite3.OperationalError:
+            pass
 
     def close(self) -> None:
         self.conn.close()
@@ -287,17 +296,24 @@ class Database:
     def record_trade(self, symbol: str, side: str | None, quantity: float | None,
                      entry_price: float | None, exit_price: float | None, pnl: float,
                      closed_at: str | None = None, opened_at: str | None = None,
-                     source: str = "") -> int:
+                     source: str = "", ext_id: str | None = None) -> int:
         cur = self.conn.execute(
             """INSERT INTO trades
                (symbol, side, quantity, entry_price, exit_price, pnl,
-                opened_at, closed_at, source)
-               VALUES (?,?,?,?,?,?,?,?,?)""",
+                opened_at, closed_at, source, ext_id)
+               VALUES (?,?,?,?,?,?,?,?,?,?)""",
             (symbol, side, quantity, entry_price, exit_price, pnl,
-             opened_at, closed_at or _now(), source),
+             opened_at, closed_at or _now(), source, ext_id),
         )
         self.conn.commit()
         return cur.lastrowid
+
+    def trade_exists(self, ext_id: str | None) -> bool:
+        if not ext_id:
+            return False
+        row = self.conn.execute(
+            "SELECT 1 FROM trades WHERE ext_id = ?", (ext_id,)).fetchone()
+        return row is not None
 
     def trades(self) -> list[sqlite3.Row]:
         return self.conn.execute("SELECT * FROM trades ORDER BY closed_at").fetchall()
