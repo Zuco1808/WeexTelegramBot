@@ -62,8 +62,12 @@ def main() -> int:
     show(f"Ticker {args.symbol} -> {client._v2_symbol(args.symbol)} (javno)",
          lambda: client.ticker(args.symbol))
     show(f"mark_price({args.symbol})", lambda: client.mark_price(args.symbol))
+    show(f"Exchange info {args.symbol} (contract spec)",
+         lambda: client.exchange_info(args.symbol))
     show("Account assets (auth)", client.account_assets)
     show("Positions (auth)", client.raw_positions)
+    show(f"Open orders {args.symbol} (auth)",
+         lambda: client.raw_open_orders(args.symbol))
 
     print("\nAko su 'auth' sekcije prošle bez greške -> ključevi i potpis rade.")
     print("NE šaljemo naloge u ovom koraku (read-only). Sljedeće: Faza 3.2 (pisanje).")

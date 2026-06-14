@@ -110,6 +110,10 @@ class RestWeexClient(WeexClient):
     def raw_positions(self) -> dict:
         return self._request("GET", "/capi/v2/account/position/allPosition", auth=True)
 
+    def raw_open_orders(self, symbol: str | None = None) -> dict:
+        params = {"symbol": self._v2_symbol(symbol)} if symbol else None
+        return self._request("GET", "/capi/v2/order/current", params=params, auth=True)
+
     def mark_price(self, symbol: str) -> float | None:
         data = self.ticker(symbol)
         d = data.get("data", data) if isinstance(data, dict) else {}
