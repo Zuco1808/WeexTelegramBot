@@ -50,6 +50,10 @@ aktivnom razvoju (pre-1.0); verzije nisu još taggane.
   limit/market, marginMode isolated, preset SL/TP podržan), `cancel_order`, tipizirani
   `open_orders`/`positions`. Potvrđeno uživo malim limitom (place→cancel). **Jedinica
   `size` = bazni coin** (WEEX računa ugovore = size/contractVal). `run_live_order_test.py`.
+- **3.5 EXECUTOR (semi-auto):** `LiveExecutor` — Signal→WEEX: stvarni balans za sizing
+  (2% rizik), per-simbol zaokruživanje (`symbol_spec`), leverage cap isolated, entry
+  limit + **preset SL/TP**; entry izvan ±1% banda → čeka da uđe (`--wait`).
+  `run_live_trade.py` (semi-auto, `--yes`, safety `--max-notional`).
 
 ### Opseg
 - Auto-trade u Fazi 1: **samo** Jeffrey (A) + bot (C), sve kripto-USDT.

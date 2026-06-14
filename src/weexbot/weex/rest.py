@@ -29,6 +29,23 @@ class WeexAPIError(RuntimeError):
     pass
 
 
+def _find_contract(data, needle: str) -> dict:
+    """Rekurzivno nadi contract dict (ima vise polja i sadrzi 'needle' u vrijednosti)."""
+    best: dict = {}
+    stack = [data]
+    while stack:
+        obj = stack.pop()
+        if isinstance(obj, dict):
+            if len(obj) > 2 and any(isinstance(v, str) and needle in v.lower()
+                                    for v in obj.values()):
+                if len(obj) > len(best):
+                    best = obj
+            stack.extend(obj.values())
+        elif isinstance(obj, list):
+            stack.extend(obj)
+    return best
+
+
 class RestWeexClient(WeexClient):
     def __init__(self, api_key: str, api_secret: str, passphrase: str,
                  base_url: str = WEEX_BASE_URL):
@@ -40,6 +57,7 @@ class RestWeexClient(WeexClient):
         self.api_secret = api_secret
         self.passphrase = passphrase
         self.base_url = base_url.rstrip("/")
+        self._spec_cache: dict[str, dict] = {}
 
     @classmethod
     def from_env(cls) -> "RestWeexClient":
@@ -111,6 +129,37 @@ class RestWeexClient(WeexClient):
         params = {"symbol": self._v2_symbol(symbol)} if symbol else None
         return self._request("GET", "/capi/v2/order/current", params=params, auth=True)
 
+    def account_balance(self, coin: str = "USDT") -> float:
+        data = self.account_assets()
+        rows = data.get("data", data) if isinstance(data, dict) else data
+        rows = rows if isinstance(rows, list) else []
+        for r in rows:
+            if str(r.get("coinName") or r.get("coin") or "").upper() == coin:
+                try:
+                    return float(r.get("available") or 0)
+                except (TypeError, ValueError):
+                    return 0.0
+        return 0.0
+
+    def symbol_spec(self, symbol: str) -> dict:
+        """Normalizirani contract parametri (cache po simbolu)."""
+        key = symbol.upper()
+        if key in self._spec_cache:
+            return self._spec_cache[key]
+        base = key[:-4].lower() if key.endswith("USDT") else key.lower()
+        c = _find_contract(self.exchange_info(symbol), base + "usdt")
+        spec = {
+            "pricePrecision": int(c.get("pricePrecision", 2)),
+            "quantityPrecision": int(c.get("quantityPrecision", 3)),
+            "minOrderSize": float(c.get("minOrderSize", 0) or 0),
+            "maxOrderSize": float(c.get("maxOrderSize", 0) or 0),
+            "contractVal": float(c.get("contractVal", 0) or 0),
+            "buyLimitPriceRatio": float(c.get("buyLimitPriceRatio", 0.01) or 0.01),
+            "sellLimitPriceRatio": float(c.get("sellLimitPriceRatio", 0.01) or 0.01),
+        }
+        self._spec_cache[key] = spec
+        return spec
+
     def mark_price(self, symbol: str) -> float | None:
         data = self.ticker(symbol)
         d = data.get("data", data) if isinstance(data, dict) else {}
@@ -156,6 +205,10 @@ class RestWeexClient(WeexClient):
         }
         if body["match_price"] == "0":
             body["price"] = self._fmt(req.price)
+        if req.preset_sl is not None:
+            body["presetStopLossPrice"] = self._fmt(req.preset_sl)
+        if req.preset_tp is not None:
+            body["presetTakeProfitPrice"] = self._fmt(req.preset_tp)
         return body
 
     def set_leverage(self, symbol: str, leverage: float, margin_mode: str = "isolated") -> dict:

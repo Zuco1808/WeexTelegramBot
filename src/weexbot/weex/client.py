@@ -25,6 +25,8 @@ class OrderRequest:
     reduce_only: bool = False
     client_order_id: str | None = None
     leverage: float | None = None
+    preset_sl: float | None = None  # presetStopLossPrice (zakaci na entry)
+    preset_tp: float | None = None  # presetTakeProfitPrice
 
 
 @dataclass

@@ -42,7 +42,7 @@ Sve niže gradi na postojećem: `weex/WeexClient` (ABC, isti potpis za paper i l
 - [ ] Reconnect/heartbeat, throttling.
 - **Acceptance:** stabilan stream cijena za aktivne simbole.
 
-## 3.5 — Spoj pipeline → izvršenje (semi-auto)
+## 3.5 — Spoj pipeline → izvršenje (semi-auto)  🟡 U TIJEKU (LiveExecutor + run_live_trade.py)
 - [ ] `MODE` env: `paper` (default) | `live`. `paper` → `PaperWeexClient`, `live` → `RestWeexClient`.
 - [ ] Za svaki TRADABLE A/C signal: generiraj nalog → **traži potvrdu** (CLI/Telegram/dashboard) → pošalji.
 - [ ] Provjera pravila iz Poruke 1: likvidacija ne smije biti bliža od SL-a.
