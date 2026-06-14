@@ -7,13 +7,16 @@ import os
 
 
 # --- WEEX API (Faza 3) - NIKAD ne hardkodirati kljuceve; citamo iz env-a ---
-# Tocan base URL i format potpisa potvrdjuju se uz WEEX API dokumentaciju.
-WEEX_BASE_URL: str = os.environ.get("WEEX_BASE_URL", "")
+# WEEX contract (futures) REST host. Potpis: base64(HMAC_SHA256(secret,
+# timestamp+METHOD+requestPath+body)); headeri ACCESS-KEY/SIGN/PASSPHRASE/TIMESTAMP.
+WEEX_BASE_URL: str = os.environ.get("WEEX_BASE_URL", "https://api-contract.weex.com")
 
 
-def weex_credentials() -> tuple[str | None, str | None]:
-    """(api_key, api_secret) iz okruzenja; None ako nisu postavljeni."""
-    return os.environ.get("WEEX_API_KEY"), os.environ.get("WEEX_API_SECRET")
+def weex_credentials() -> tuple[str | None, str | None, str | None]:
+    """(api_key, api_secret, passphrase) iz okruzenja; None ako nisu postavljeni."""
+    return (os.environ.get("WEEX_API_KEY"),
+            os.environ.get("WEEX_API_SECRET"),
+            os.environ.get("WEEX_API_PASSPHRASE"))
 
 # --- Risk / kapital (dogovoreno) ---
 CAPITAL_USDT: float = 100.0       # pocetni simulacijski kapital

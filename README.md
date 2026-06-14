@@ -218,21 +218,19 @@ Ključevi se **nikad ne stavljaju u kod** — čitaju se iz okruženja preko
    ```dotenv
    WEEX_API_KEY=tvoj_api_key
    WEEX_API_SECRET=tvoj_api_secret
-   WEEX_BASE_URL=https://...        # potvrditi iz službene WEEX API dokumentacije
+   WEEX_API_PASSPHRASE=tvoj_passphrase
+   WEEX_BASE_URL=https://api-contract.weex.com
    ```
 
-3. `.env` je u `.gitignore` — ne commitati ga. Učitaj ga prije pokretanja
-   (npr. `python-dotenv`, ili izvozom varijabli u shellu).
+3. `.env` je u `.gitignore` — ne commitati ga. `run_live_check.py` ga učitava sam.
 
 ```powershell
-# PowerShell (jednokratno u sesiji)
-$env:WEEX_API_KEY="..."; $env:WEEX_API_SECRET="..."; $env:WEEX_BASE_URL="https://..."
-python -c "from weexbot.weex import RestWeexClient; RestWeexClient.from_env()"  # validira ključeve
+python run_live_check.py            # READ-ONLY provjera veze (ne šalje naloge)
 ```
 
-> Bez ključeva sve radi u paper modu (`PaperWeexClient`). `RestWeexClient` baca
-> `ValueError` ako ključevi/`WEEX_BASE_URL` nisu postavljeni, a mrežne metode su još
-> `NotImplementedError` dok se ne potvrde endpointi/potpis iz WEEX dokumentacije.
+> Bez ključeva sve radi u paper modu (`PaperWeexClient`). `RestWeexClient` ima
+> implementirano **čitanje** (server time, ticker/mark price, assets, positions);
+> **pisanje** (place/cancel/leverage) dolazi u Fazi 3.2 nakon read-only validacije.
 
 ## Sljedeće
 
