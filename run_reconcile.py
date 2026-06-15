@@ -3,14 +3,17 @@
 Cita order history, biljezi realizirani PnL zatvorenih trejdova u data/weex_live.db
 (dedup po order_id). Potom: python run_reports.py --db weex_live.db  -> pravi PnL.
 
-    python run_reconcile.py                       # default simboli
+    python run_reconcile.py                       # jednom, default simboli
     python run_reconcile.py --symbols BTCUSDT,ETHUSDT
+    python run_reconcile.py --loop --interval 300 # svakih 5 min (dashboard svjez)
     python run_reconcile.py --debug               # ispisi sirovi history
 """
 import argparse
 import json
 import os
 import sys
+import time
+from datetime import datetime, timezone
 
 try:
     sys.stdout.reconfigure(encoding="utf-8")
@@ -39,6 +42,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--symbols", default=DEFAULT_SYMBOLS)
     ap.add_argument("--debug", action="store_true")
+    ap.add_argument("--loop", action="store_true", help="ponavljaj zauvijek (za VPS/servis)")
+    ap.add_argument("--interval", type=int, default=300, help="razmak u sekundama (uz --loop)")
     args = ap.parse_args()
 
     load_env(os.path.join(ROOT, ".env"))
@@ -51,6 +56,7 @@ def main():
     symbols = [s.strip() for s in args.symbols.split(",") if s.strip()]
     client = RestWeexClient.from_env()
     db = Database(DB_PATH)
+    rec = Reconciler(client, db)
 
     if args.debug:
         for s in symbols:
@@ -60,16 +66,26 @@ def main():
             except WeexAPIError as e:
                 print(f"GRESKA {s}: {e}")
 
-    try:
-        new = Reconciler(client, db).reconcile(symbols)
-    except WeexAPIError as e:
-        print(f"\nWEEX greska: {e}")
-        print("Posalji poruku (po polju/kodu doradimo parsiranje history-ja).")
-        return 1
+    def cycle() -> None:
+        try:
+            new = rec.reconcile(symbols)
+            ts = datetime.now(timezone.utc).strftime("%H:%M:%S")
+            print(f"[{ts}] novih: {new}  (ukupno: {db.count('trades')})  -> {DB_PATH}")
+        except WeexAPIError as e:
+            print(f"WEEX greska: {e}")
 
-    print(f"\nNovih zabiljezenih zatvorenih trejdova: {new}")
-    print(f"Ledger: {DB_PATH}  (ukupno trejdova: {db.count('trades')})")
-    print("Dashboard sa stvarnim PnL:  python run_reports.py --db weex_live.db")
+    if not args.loop:
+        cycle()
+        print("Dashboard sa stvarnim PnL:  python run_reports.py --db weex_live.db")
+        return 0
+
+    print(f"Auto-reconcile petlja (svakih {args.interval}s). Ctrl+C za prekid.")
+    try:
+        while True:
+            cycle()
+            time.sleep(args.interval)
+    except KeyboardInterrupt:
+        print("\nPrekinuto.")
     return 0
 
 
