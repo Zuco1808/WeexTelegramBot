@@ -184,6 +184,47 @@ zatvorene trejdove u ledger.
 > Pravi PnL po danima dolazi tek s cijenama u Fazi 3 (live/price feed). Do tada
 > `--seed-demo` služi za prikaz formata.
 
+## Go-live Quickstart
+
+> Stvarni novac. Kreni **semi-auto** i sa **sićušnim iznosom**. Idealno na **VPS-u s
+> fiksnom IP** (whitelistaj je jednom na WEEX) za rad 24/7.
+
+```powershell
+# 1) Okruženje
+python -m venv venv; .\venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+
+# 2) .env (kopiraj .env.example) — popuni:
+#    WEEX_API_KEY / WEEX_API_SECRET / WEEX_API_PASSPHRASE   (+ whitelistaj javnu IP)
+#    TELEGRAM_API_ID / TELEGRAM_API_HASH / TELEGRAM_CHANNEL  (my.telegram.org)
+#    (opc.) TELEGRAM_BOT_TOKEN / TELEGRAM_ALERT_CHAT_ID      (alarmi)
+
+# 3) Provjera veze (ne šalje ništa)
+python run_live_check.py
+
+# 4) Praćenje kanala — SEMI-AUTO (javlja plan, ne trguje)
+python run_telegram.py --backfill 20
+
+# 5) Prvi pravi (sićušan) trade, ručno
+python run_live_trade.py --text "...signal..." --yes --wait
+
+# 6) Nakon zatvaranja: zabilježi PnL + dashboard
+python run_reconcile.py
+python run_reports.py --db weex_live.db --html
+
+# 7) Tek kad stekneš povjerenje: auto slanje (u ±1% bandu)
+python run_telegram.py --auto
+```
+
+**Kočnice (uvijek pri ruci):**
+```powershell
+python run_kill.py --on "panic" --cancel     # blokiraj sve + otkaži otvorene naloge
+python run_kill.py --off                      # odmrzni
+```
+Sigurnosni gate (kill-switch, dnevni stop `DAILY_LOSS_LIMIT_USDT`, limit pozicija
+`MAX_CONCURRENT_POSITIONS`) blokira slanje automatski. Alarmi (ako su konfigurirani)
+javljaju na Telegram: signal / plasiran nalog / blokada / kill.
+
 ## Faza 3 — WEEX klijent (skeleton)
 
 Paket `weex/`: jedinstveno sučelje `WeexClient`, paper implementacija s fill-ovima

@@ -26,6 +26,13 @@ def telegram_config() -> tuple[str | None, str | None, str | None]:
             os.environ.get("TELEGRAM_API_HASH"),
             os.environ.get("TELEGRAM_CHANNEL"))
 
+
+# --- Telegram alarmi (Bot API) ---
+def telegram_alert_config() -> tuple[str | None, str | None]:
+    """(bot_token, chat_id) iz env-a; @BotFather token + tvoj chat_id."""
+    return (os.environ.get("TELEGRAM_BOT_TOKEN"),
+            os.environ.get("TELEGRAM_ALERT_CHAT_ID"))
+
 # --- Risk / kapital (dogovoreno) ---
 CAPITAL_USDT: float = 100.0       # pocetni simulacijski kapital
 RISK_PCT_SCALP: float = 0.01      # 1% rizika po scalp signalu (Jeffrey + bot)

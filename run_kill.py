@@ -64,8 +64,10 @@ def main():
     if args.on is not None:
         engage_kill(KILL_PATH, args.on)
         print(f"KILL UKLJUCEN ({args.on}). Svi novi nalozi blokirani.")
+        load_env(os.path.join(ROOT, ".env"))
+        from weexbot.notify import notifier_from_env
+        notifier_from_env().send(f"⛔ KILL-SWITCH UKLJUCEN: {args.on}")
         if args.cancel:
-            load_env(os.path.join(ROOT, ".env"))
             print("Otkazivanje otvorenih naloga:")
             cancel_open([s.strip() for s in args.symbols.split(",") if s.strip()])
         return 0

@@ -28,13 +28,21 @@ class RouterResult:
 
 class SignalRouter:
     def __init__(self, db, trade_manager, executor=None, mode: str = "notify",
-                 on_plan=None, gate=None):
+                 on_plan=None, gate=None, notifier=None):
         self.db = db
         self.tm = trade_manager
         self.executor = executor          # LiveExecutor ili None
         self.mode = mode                  # "notify" (semi-auto) | "auto"
         self.on_plan = on_plan            # callback(message_id, signal, plan) za obavijest
         self.gate = gate                  # SafetyGate ili None
+        self.notifier = notifier          # Notifier ili None (Telegram alarmi)
+
+    def _alert(self, text: str) -> None:
+        if self.notifier:
+            try:
+                self.notifier.send(text)
+            except Exception:             # alarm ne smije srusiti ingest
+                pass
 
     def handle(self, message_id: str, text: str, msg_date: str | None = None) -> RouterResult:
         if self.db.signal_exists(message_id):
@@ -77,18 +85,23 @@ class SignalRouter:
             res = self.executor.place(plan, client_order_id=f"sig{int(time.time())}")
             self.db.audit("auto_placed", message_id,
                           {"symbol": plan.symbol, "qty": plan.quantity})
+            self._alert(f"✅ PLASIRANO {plan.symbol} {plan.side} qty={plan.quantity} "
+                        f"@ {plan.entry} SL={plan.stop} TP={plan.take_profit}")
             return RouterResult(message_id, "PLACED",
                                 {"symbol": plan.symbol, "result": getattr(res, "status", "")})
 
         if blocked:
             self.db.audit("blocked", message_id,
                           {"symbol": plan.symbol, "reason": gate.reason})
+            self._alert(f"⛔ BLOKIRANO {plan.symbol}: {gate.reason}")
             return RouterResult(message_id, "BLOCKED",
                                 {"symbol": plan.symbol, "reason": gate.reason})
 
         # semi-auto: samo javi plan, ne salji
         self.db.audit("plan_notify", message_id,
                       {"symbol": plan.symbol, "in_band": plan.in_band})
+        self._alert(f"🔔 SIGNAL {plan.symbol} {plan.side} qty={plan.quantity} @ {plan.entry} "
+                    f"SL={plan.stop} TP={plan.take_profit} (u_bandu={plan.in_band})")
         return RouterResult(message_id, "NOTIFY",
                             {"symbol": plan.symbol, "side": plan.side,
                              "qty": plan.quantity, "in_band": plan.in_band})

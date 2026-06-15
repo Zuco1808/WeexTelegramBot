@@ -65,6 +65,8 @@ aktivnom razvoju (pre-1.0); verzije nisu još taggane.
   (realizirani PnL danas), **limit istovremenih pozicija**; `SafetyGate.check()` blokira
   slanje prije naloga (u routeru i `run_live_trade`). `run_kill.py` (--on/--off/--status,
   --cancel otvorenih). Config: `DAILY_LOSS_LIMIT_USDT`, `MAX_CONCURRENT_POSITIONS`.
+- **Alarmi:** `notify.py` (Telegram Bot API, stdlib) — obavijesti na signal/plasiran
+  nalog/blokadu/kill; integrirano u `SignalRouter` i `run_kill`. **Go-live Quickstart** u README.
 
 ### Opseg
 - Auto-trade u Fazi 1: **samo** Jeffrey (A) + bot (C), sve kripto-USDT.
