@@ -13,6 +13,17 @@ def test_full_setup_jedna_poruka():
     assert f.is_building is True
 
 
+def test_hype_manual_setup_prepoznaje_par():
+    # Drugi kanal salje plain-text manual format s vodecim tickerom bez USDT.
+    f = extract_facts("HYPE Long\nEntry: 61.2-64.1\nSL: 59.3\nTarget: 74.2")
+    assert f.pairs == ["HYPE"]
+    assert f.side == "LONG"
+    assert f.entry_zone == (61.2, 64.1)
+    assert f.stop_value == 59.3
+    assert f.targets == [74.2]
+    assert f.is_building is True
+
+
 def test_stop_to_je_move():
     f = extract_facts("BTC Stop to 66100")
     assert f.pairs == ["BTC"]

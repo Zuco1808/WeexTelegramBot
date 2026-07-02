@@ -16,6 +16,7 @@ Preduvjeti (.env):
 """
 import argparse
 import os
+import re
 import sys
 
 try:
@@ -36,6 +37,13 @@ def load_env(path):
             if line and not line.startswith("#") and "=" in line:
                 k, v = line.split("=", 1)
                 os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+
+
+def channel_ref(channel):
+    """Privatni kanali/grupe se referenciraju numerickim ID-em (npr. -1003881583689);
+    @username i t.me linkovi ostaju string. Telethon treba int za ID, ne string."""
+    ch = (channel or "").strip()
+    return int(ch) if re.fullmatch(r"-?\d+", ch) else ch
 
 
 def build_executor():
@@ -62,6 +70,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--auto", action="store_true", help="auto salji naloge (u bandu)")
     ap.add_argument("--backfill", type=int, default=0, help="obradi zadnjih N poruka na startu")
+    ap.add_argument("--dump", action="store_true",
+                    help="ispisi sirovi tekst svake poruke (dijagnostika parsera)")
+    ap.add_argument("--list-chats", action="store_true",
+                    help="ispisi ID i naslov svih kanala/grupa (nadji TELEGRAM_CHANNEL) pa izadji")
     args = ap.parse_args()
 
     load_env(os.path.join(ROOT, ".env"))
@@ -76,8 +88,25 @@ def main():
     from weexbot.ingest import SignalRouter
 
     api_id, api_hash, channel = telegram_config()
-    if not all([api_id, api_hash, channel]):
-        print("Nedostaju TELEGRAM_API_ID / TELEGRAM_API_HASH / TELEGRAM_CHANNEL u .env")
+    if not all([api_id, api_hash]):
+        print("Nedostaju TELEGRAM_API_ID / TELEGRAM_API_HASH u .env")
+        return 1
+
+    client = TelegramClient(os.path.join(ROOT, "data", "tg_session"), int(api_id), api_hash)
+
+    if args.list_chats:
+        async def _list():
+            await client.start()
+            print("Kanali/grupe kojima pripadas (kopiraj ID u .env -> TELEGRAM_CHANNEL):")
+            print(f"  {'ID':>16s}  naslov")
+            async for d in client.iter_dialogs():
+                print(f"  {d.id:>16}  {d.name}")
+        with client:
+            client.loop.run_until_complete(_list())
+        return 0
+
+    if not channel:
+        print("Nedostaje TELEGRAM_CHANNEL u .env (ili pokreni --list-chats da ga nadjes).")
         return 1
 
     from weexbot.notify import notifier_from_env
@@ -93,21 +122,24 @@ def main():
     print(f"Mod: {'AUTO (salje u bandu)' if args.auto else 'SEMI-AUTO (samo javlja)'}  "
           f"(kill-switch + dnevni stop + limit pozicija aktivni)")
 
-    client = TelegramClient(os.path.join(ROOT, "data", "tg_session"), int(api_id), api_hash)
+    chan = channel_ref(channel)
 
     async def handle_msg(message_id, text, date):
+        if args.dump:
+            preview = (text or "").replace("\n", " \\n ")[:160]
+            print(f"[{message_id}] RAW: {preview}")
         res = router.handle(message_id, text, date)
         print(f"[{message_id}] {res.action}  {res.detail}")
 
-    @client.on(events.NewMessage(chats=channel))
+    @client.on(events.NewMessage(chats=chan))
     async def _on_new(event):
         d = event.message.date.isoformat() if event.message and event.message.date else None
         await handle_msg(str(event.id), event.raw_text or "", d)
 
     async def run():
         await client.start()
-        ent = await client.get_entity(channel)
-        print(f"Slusam: {getattr(ent, 'title', channel)}")
+        ent = await client.get_entity(chan)
+        print(f"Slusam: {getattr(ent, 'title', chan)}")
         if args.backfill:
             msgs = await client.get_messages(ent, limit=args.backfill)
             for m in reversed(msgs):

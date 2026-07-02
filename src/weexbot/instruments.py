@@ -16,7 +16,7 @@ CRYPTO_BASES: frozenset[str] = frozenset({
     "BTC", "ETH", "BNB", "XRP", "SOL", "ADA", "AVAX", "LINK", "TON", "TRX", "DOGE",
     "ASTER", "PUMP", "FF", "FARTCOIN", "ZEC", "EGLD", "ETC", "LTC", "ATOM", "HBAR",
     "XMR", "DOT", "NEAR", "APT", "ARB", "OP", "INJ", "SUI", "SEI", "TIA", "RUNE",
-    "AAVE", "UNI", "FIL",
+    "AAVE", "UNI", "FIL", "HYPE", "TAO",
 })
 
 # Prijateljsko ime (kako Brandon pise) -> WEEX USDT perpetual simbol.

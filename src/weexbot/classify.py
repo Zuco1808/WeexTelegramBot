@@ -26,8 +26,11 @@ _RE_D = re.compile(r"(stop\s*-?\s*loss\s*:|stoploss\s*:|target\s*:|entry\s*level
 # E: izmjena postojece pozicije / upravljanje.
 # Bez globalnog \b...\b jer se TP cesto lijepi uz znamenku ("1TP") ili %,
 # pa svaku alternativu sidrimo zasebno gdje ima smisla.
+# "clos... N%" hvata djelomicno zatvaranje ("Close 35%", "Close 50% of rest");
+# zahtijeva postotak da "close" u prozi ("close to target") ostane UNKNOWN.
 _RE_E = re.compile(
-    r"(?:\bsl\b|\bbreakeven\b|move\s+(?:the\s+)?stop|mov\w*\s+sl|tp\d?\b|fix\s*\d)",
+    r"(?:\bsl\b|\bbreakeven\b|move\s+(?:the\s+)?stop|mov\w*\s+sl|tp\d?\b|fix\s*\d"
+    r"|clos\w*[^%\d]{0,20}\d+\s*%)",
     re.I,
 )
 

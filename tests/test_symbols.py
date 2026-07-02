@@ -36,3 +36,15 @@ def test_nepodrzane_dionice_nisu_tradable():
 
 def test_nepoznat_simbol_nije_tradable():
     assert resolve_symbol("ZZZZ").tradable is False
+
+
+def test_hype_je_tradable():
+    info = resolve_symbol("HYPE")
+    assert info.tradable is True
+    assert info.weex_symbol == "HYPEUSDT"
+
+
+def test_tao_je_tradable():
+    info = resolve_symbol("TAO")
+    assert info.tradable is True
+    assert info.weex_symbol == "TAOUSDT"
