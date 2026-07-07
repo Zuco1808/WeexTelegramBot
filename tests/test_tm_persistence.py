@@ -44,6 +44,24 @@ def test_bez_db_radi_normalno():
     assert a == []                           # nepotpun nacrt, bez greske
 
 
+def test_symbol_ok_prihvaca_validiran_bare_ticker():
+    # bez validatora: nepoznat bare ticker -> NEEDS_REVIEW (sigurnosni model)
+    tm0 = TradeManager()
+    a0 = tm0.process("m1", "PEPE Long\nEntry: 0.010-0.012\nSL: 0.009")
+    assert a0[0].kind == "NEEDS_REVIEW"
+
+    # s WEEX-validatorom (simbol postoji) -> OPEN, par PEPE
+    tm = TradeManager(symbol_ok=lambda b: b == "PEPE")
+    a = tm.process("m1", "PEPE Long\nEntry: 0.010-0.012\nSL: 0.009")
+    assert [x.kind for x in a] == ["OPEN"]
+    assert tm.position("PEPE").side == "LONG"
+
+    # validator koji odbija -> i dalje NEEDS_REVIEW
+    tmx = TradeManager(symbol_ok=lambda b: False)
+    ax = tmx.process("m1", "ZZZ Long\nEntry: 87-90\nSL: 78")
+    assert ax[0].kind == "NEEDS_REVIEW"
+
+
 def test_rehidracija_otvorenih_pozicija_iz_baze():
     # Nakon VPS restarta (systemd Restart=always) novi proces mora ucitati
     # otvorene pozicije iz baze, inace "Close N%" pada na NEEDS_REVIEW.

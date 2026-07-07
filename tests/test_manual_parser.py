@@ -28,6 +28,16 @@ def test_dollar_ne_hvata_iznos():
     assert extract_facts("We'll start with $10,000 today").pairs == []
 
 
+def test_lead_ticker_kandidat_za_nepoznat_simbol():
+    # bare nepoznat vodeci ticker -> kandidat (validira se protiv WEEX-a u TM-u)
+    f = extract_facts("PEPE Long\nEntry: 0.010-0.012\nSL: 0.009")
+    assert f.pairs == []
+    assert f.lead_ticker == "PEPE"
+    assert f.unknown_ticker is True
+    # poznat par nije kandidat
+    assert extract_facts("BTC Long\nEntry: 60000\nSL: 59000").lead_ticker is None
+
+
 def test_hype_manual_setup_prepoznaje_par():
     # Drugi kanal salje plain-text manual format s vodecim tickerom bez USDT.
     f = extract_facts("HYPE Long\nEntry: 61.2-64.1\nSL: 59.3\nTarget: 74.2")

@@ -55,6 +55,7 @@ class MessageFacts:
     close: bool = False                  # stopped out / fully close
     open_hint: bool = False              # "trying/opening ... long/short"
     unknown_ticker: bool = False         # vodeci neprepoznat ticker (novi instrument)
+    lead_ticker: str | None = None       # vodeci neprepoznat ticker (kandidat za WEEX validaciju)
 
     @property
     def is_building(self) -> bool:
@@ -112,15 +113,18 @@ def _find_pairs(text: str) -> list[str]:
     return found
 
 
-def _has_unknown_ticker(text: str, pairs: list[str]) -> bool:
-    """Vodeci ALLCAPS token koji NIJE prepoznat kao par => novi/nepoznat instrument."""
+def _leading_ticker(text: str, pairs: list[str]) -> str | None:
+    """Vodeci ALLCAPS token koji NIJE prepoznat kao par => kandidat za novi simbol.
+    Validira se protiv WEEX liste u TradeManageru; bez validacije -> NEEDS_REVIEW."""
     if pairs:
-        return False
+        return None
     m = _LEADING_TOKEN.match(text)
     if not m:
-        return False
+        return None
     tok = m.group(1)
-    return not tok.endswith("USDT") and tok not in KNOWN_BASES
+    if tok.endswith("USDT") or tok in KNOWN_BASES:
+        return None
+    return tok
 
 
 def _find_side(text: str) -> str | None:
@@ -248,10 +252,12 @@ def extract_facts(raw: str) -> MessageFacts:
     entry, zone = _find_entry(text)
     stop_val, stop_move = _find_stop(text)
     pairs = _find_pairs(text)
+    lead = _leading_ticker(text, pairs)
     return MessageFacts(
         raw=raw,
         pairs=pairs,
-        unknown_ticker=_has_unknown_ticker(text, pairs),
+        unknown_ticker=bool(lead),
+        lead_ticker=lead,
         side=_find_side(text),
         entry=entry,
         entry_zone=zone,

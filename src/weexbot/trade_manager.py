@@ -90,9 +90,10 @@ class TradeAction:
 
 
 class TradeManager:
-    def __init__(self, db=None, stale_ticks: int = TM_STALE_TICKS):
+    def __init__(self, db=None, stale_ticks: int = TM_STALE_TICKS, symbol_ok=None):
         self.db = db                       # opcionalni weexbot.Database za perzistenciju
         self.stale_ticks = stale_ticks
+        self.symbol_ok = symbol_ok         # opc. Callable[[str], bool] - validacija simbola (WEEX lista)
         self.tick = 0
         self.drafts: dict[tuple[str, str], Draft] = {}
         self.positions: dict[str, list[Position]] = {}
@@ -178,6 +179,9 @@ class TradeManager:
     def _resolve_build_pair(self, facts: MessageFacts) -> tuple[str | None, str | None]:
         if facts.pairs:
             return facts.pairs[0], None
+        # nepoznat vodeci ticker: primi ga SAMO ako je stvarni WEEX simbol (validator)
+        if facts.lead_ticker and self.symbol_ok and self.symbol_ok(facts.lead_ticker):
+            return facts.lead_ticker, None
         if facts.unknown_ticker:
             return None, "novi signal s neprepoznatim simbolom (ne-kripto/nepoznat ticker)"
         if self.current_pair is not None:

@@ -29,6 +29,19 @@ class WeexAPIError(RuntimeError):
     pass
 
 
+def bases_from_exchange_info(data) -> set[str]:
+    """Skup baznih coina USDT-perpetuala iz exchangeInfo (npr. {'BTC','ETH','WIF'})."""
+    syms = data.get("symbols", []) if isinstance(data, dict) else []
+    out: set[str] = set()
+    for s in syms:
+        if not isinstance(s, dict) or str(s.get("quoteAsset", "")).upper() != "USDT":
+            continue
+        base = str(s.get("baseAsset", "")).upper()
+        if base:
+            out.add(base)
+    return out
+
+
 def _find_contract(data, needle: str) -> dict:
     """Rekurzivno nadi contract dict (ima vise polja i sadrzi 'needle' u vrijednosti)."""
     best: dict = {}
@@ -58,6 +71,7 @@ class RestWeexClient(WeexClient):
         self.passphrase = passphrase
         self.base_url = base_url.rstrip("/")
         self._spec_cache: dict[str, dict] = {}
+        self._bases_cache: set[str] | None = None
 
     @classmethod
     def from_env(cls) -> "RestWeexClient":
@@ -111,6 +125,19 @@ class RestWeexClient(WeexClient):
     def exchange_info(self, symbol: str | None = None) -> dict:
         params = {"symbol": symbol} if symbol else None
         return self._request("GET", "/capi/v3/market/exchangeInfo", params=params)
+
+    def listed_bases(self) -> set[str]:
+        """Keširan skup baznih coina svih USDT-perpetuala (za validaciju simbola)."""
+        if self._bases_cache is None:
+            self._bases_cache = bases_from_exchange_info(self.exchange_info())
+        return self._bases_cache
+
+    def is_listed(self, base: str) -> bool:
+        """Postoji li <BASE>USDT perpetual na WEEX-u (prima 'WIF' ili 'WIFUSDT')."""
+        b = (base or "").upper()
+        if b.endswith("USDT") and len(b) > 4:
+            b = b[:-4]
+        return b in self.listed_bases()
 
     def ticker(self, symbol: str) -> dict:
         return self._request("GET", "/capi/v2/market/ticker",

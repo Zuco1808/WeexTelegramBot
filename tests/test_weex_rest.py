@@ -9,10 +9,22 @@ import pytest
 
 from weexbot.weex import OrderRequest, RestWeexClient
 from weexbot.weex.client import ENTRY_LIMIT
+from weexbot.weex.rest import bases_from_exchange_info
 
 
 def _client():
     return RestWeexClient("key", "secret", "pass", "https://example")
+
+
+def test_bases_from_exchange_info():
+    data = {"symbols": [
+        {"symbol": "BTCUSDT", "baseAsset": "BTC", "quoteAsset": "USDT"},
+        {"symbol": "WIFUSDT", "baseAsset": "WIF", "quoteAsset": "USDT"},
+        {"symbol": "BTCUSDC", "baseAsset": "BTC", "quoteAsset": "USDC"},  # ne-USDT
+        {"bez": "baseAsset"},
+    ]}
+    assert bases_from_exchange_info(data) == {"BTC", "WIF"}
+    assert bases_from_exchange_info({}) == set()
 
 
 def test_bez_kljuceva_baca_value_error():

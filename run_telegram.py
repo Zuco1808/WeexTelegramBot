@@ -116,7 +116,19 @@ def main():
     count_open = (lambda: len(executor.client.positions())) if executor else None
     gate = SafetyGate(db, os.path.join(ROOT, "data", "KILL"), count_open=count_open)
     notifier = notifier_from_env()
-    router = SignalRouter(db, TradeManager(db=db), executor=executor,
+
+    # WEEX lista simbola -> bare nepoznati ticker ("PEPE Long") se prati samo ako
+    # stvarno postoji na WEEX-u; inace NEEDS_REVIEW. Bez klijenta/mreze -> None.
+    symbol_ok = None
+    if executor is not None:
+        try:
+            n = len(executor.client.listed_bases())
+            symbol_ok = executor.client.is_listed
+            print(f"WEEX lista simbola: {n} USDT-perpetuala (validacija nepoznatih tickera aktivna)")
+        except Exception as e:                # mreza/API padne -> degradiraj na NEEDS_REVIEW
+            print(f"(WEEX lista nedostupna: {e} -> nepoznati bare tickeri -> NEEDS_REVIEW)")
+
+    router = SignalRouter(db, TradeManager(db=db, symbol_ok=symbol_ok), executor=executor,
                           mode="auto" if args.auto else "notify",
                           on_plan=on_plan, gate=gate, notifier=notifier)
     print(f"Mod: {'AUTO (salje u bandu)' if args.auto else 'SEMI-AUTO (samo javlja)'}  "
