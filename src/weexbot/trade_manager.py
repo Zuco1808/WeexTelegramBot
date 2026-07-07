@@ -14,6 +14,7 @@ Emitira listu TradeAction. Lokalna korelacijska logika; izvrsenje na WEEX je Faz
 """
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass, field
 
@@ -97,6 +98,30 @@ class TradeManager:
         self.positions: dict[str, list[Position]] = {}
         self.current_pair: str | None = None
         self.actions: list[TradeAction] = []
+        self._rehydrate()
+
+    def _rehydrate(self) -> None:
+        """Ucitaj OPEN pozicije iz baze u memoriju (restart-safe: management poruke
+        nakon restarta se primijene na postojecu poziciju umjesto NEEDS_REVIEW).
+        entry_tiers se ne perzistiraju -> ostaju prazni nakon rehidracije."""
+        if self.db is None:
+            return
+        for row in self.db.tm_positions():
+            if row["status"] != "OPEN":
+                continue
+            lo, hi = row["entry_low"], row["entry_high"]
+            zone = (lo, hi) if lo is not None and hi is not None else None
+            try:
+                targets = json.loads(row["targets"]) if row["targets"] else []
+            except (ValueError, TypeError):
+                targets = []
+            pos = Position(
+                pair=row["pair"], side=row["side"], entry=row["entry"], entry_zone=zone,
+                stop=row["stop"], targets=targets, open_msg=row["open_msg"] or "",
+                tag=row["tag"], status="OPEN", remaining_pct=row["remaining_pct"],
+                last_tick=self.tick,
+            )
+            self.positions.setdefault(row["pair"], []).append(pos)
 
     # ------------------------------------------------------------------ #
     def process(self, message_id: str, text: str) -> list[TradeAction]:

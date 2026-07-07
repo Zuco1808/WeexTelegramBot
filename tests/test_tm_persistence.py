@@ -42,3 +42,25 @@ def test_bez_db_radi_normalno():
     tm = TradeManager()                      # db=None
     a = tm.process("m1", "BTC Long")
     assert a == []                           # nepotpun nacrt, bez greske
+
+
+def test_rehidracija_otvorenih_pozicija_iz_baze():
+    # Nakon VPS restarta (systemd Restart=always) novi proces mora ucitati
+    # otvorene pozicije iz baze, inace "Close N%" pada na NEEDS_REVIEW.
+    db = Database(":memory:")
+    tm1 = TradeManager(db=db)
+    tm1.process("m1", "BTC Long")
+    tm1.process("m2", "BTC / Entry 64400-65000 / Stop 63000 / Target 70000")
+    assert len(tm1.all_open()) == 1
+
+    tm2 = TradeManager(db=db)                 # "restart" na istoj bazi
+    assert len(tm2.all_open()) == 1           # rehidrirano iz baze
+    pos = tm2.position("BTC")
+    assert pos.side == "LONG"
+    assert pos.stop == 63000.0
+    assert pos.remaining_pct == 100
+
+    # management poruka nakon restarta se primijeni umjesto NEEDS_REVIEW
+    actions = tm2.process("m9", "BTC\n\nClose 30%")
+    assert [a.kind for a in actions] == ["PARTIAL_CLOSE"]
+    assert tm2.position("BTC").remaining_pct == 70

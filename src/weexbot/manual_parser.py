@@ -82,10 +82,19 @@ class MessageFacts:
 # --- pojedinacni ekstraktori ------------------------------------------------ #
 _PAIR_TOKEN = re.compile(r"\b([A-Z]{2,10})\b")
 _LEADING_TOKEN = re.compile(r"\s*([A-Z]{2,10})\b")
+# "$TICKER" - kanal eksplicitno oznacava simbol dolarom (npr. "$WIF SHORT").
+# Zahtijeva slovo iza $ pa "$10,000" (iznos) ne prolazi.
+_DOLLAR_TOKEN = re.compile(r"\$([A-Z][A-Z0-9]{1,9})\b")
 
 
 def _find_pairs(text: str) -> list[str]:
     found: list[str] = []
+    # $TICKER: eksplicitno oznacen simbol -> par i kad nije u registru (nova moneta).
+    for m in _DOLLAR_TOKEN.finditer(text):
+        tok = m.group(1)
+        base = tok[:-4] if tok.endswith("USDT") and len(tok) > 4 else tok
+        if base not in found:
+            found.append(base)
     # puna imena (Ethereum/Bitcoin)
     for name, base in NAME_MAP.items():
         if re.search(rf"\b{name}\b", text, re.I) and base not in found:

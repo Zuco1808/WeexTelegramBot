@@ -13,6 +13,21 @@ def test_full_setup_jedna_poruka():
     assert f.is_building is True
 
 
+def test_dollar_ticker_je_par():
+    # Kanal oznacava signale dolarom ("$WIF SHORT") -> par WIF bez rucnog dodavanja.
+    f = extract_facts("$WIF SHORT\nTake: 0.1551\nStoploss: 0.1820")
+    assert f.pairs == ["WIF"]
+    assert f.side == "SHORT"
+    assert f.stop_value == 0.1820
+    # $TICKERUSDT -> baza bez USDT
+    assert extract_facts("$FOOUSDT Long\nEntry: 3.1\nSL: 2.9").pairs == ["FOO"]
+
+
+def test_dollar_ne_hvata_iznos():
+    # "$10,000" je iznos, ne ticker.
+    assert extract_facts("We'll start with $10,000 today").pairs == []
+
+
 def test_hype_manual_setup_prepoznaje_par():
     # Drugi kanal salje plain-text manual format s vodecim tickerom bez USDT.
     f = extract_facts("HYPE Long\nEntry: 61.2-64.1\nSL: 59.3\nTarget: 74.2")
